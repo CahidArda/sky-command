@@ -187,45 +187,61 @@ export default function PropPlane() {
       {/* ================================================================
           WING STRUTS — diagonal braces from lower fuselage to wing
           Characteristic of Cessna high-wing aircraft
+
+          Left main strut:
+            Bottom (fuselage): (-0.55, -0.2, -1.6)
+            Top (wing underside): (-2.5, 0.88, -1.6)
+            dx=-1.95, dy=1.08
+            midpoint=(-1.525, 0.34, -1.6)
+            length=sqrt(3.8025+1.1664)=2.229
+            angle=atan2(-1.95, 1.08)=-1.065
+
+          Left jury strut:
+            Bottom (mid-strut area): (-1.525, 0.34, -1.3)
+            Top (wing underside): (-2.8, 0.88, -1.3)
+            dx=-1.275, dy=0.54
+            midpoint=(-2.1625, 0.61, -1.3)
+            length=sqrt(1.626+0.292)=1.385
+            angle=atan2(-1.275, 0.54)=-1.17
           ================================================================ */}
 
       {/* Left wing strut */}
       <mesh
-        position={[-1.8, 0.2, -1.5]}
-        rotation={[0, 0, 0.62]}
+        position={[-1.525, 0.34, -1.6]}
+        rotation={[0, 0, -1.065]}
         castShadow
       >
-        <boxGeometry args={[0.06, 1.8, 0.08]} />
+        <boxGeometry args={[0.06, 2.229, 0.08]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
 
       {/* Right wing strut */}
       <mesh
-        position={[1.8, 0.2, -1.5]}
-        rotation={[0, 0, -0.62]}
+        position={[1.525, 0.34, -1.6]}
+        rotation={[0, 0, 1.065]}
         castShadow
       >
-        <boxGeometry args={[0.06, 1.8, 0.08]} />
+        <boxGeometry args={[0.06, 2.229, 0.08]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
 
       {/* Left rear jury strut (smaller, between main strut and wing) */}
       <mesh
-        position={[-2.3, 0.5, -1.2]}
-        rotation={[0, 0, 0.55]}
+        position={[-2.1625, 0.61, -1.3]}
+        rotation={[0, 0, -1.17]}
         castShadow
       >
-        <boxGeometry args={[0.03, 0.7, 0.04]} />
+        <boxGeometry args={[0.03, 1.385, 0.04]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
 
       {/* Right rear jury strut */}
       <mesh
-        position={[2.3, 0.5, -1.2]}
-        rotation={[0, 0, -0.55]}
+        position={[2.1625, 0.61, -1.3]}
+        rotation={[0, 0, 1.17]}
         castShadow
       >
-        <boxGeometry args={[0.03, 0.7, 0.04]} />
+        <boxGeometry args={[0.03, 1.385, 0.04]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
 
@@ -300,9 +316,12 @@ export default function PropPlane() {
           ================================================================ */}
 
       {/* --- Nose gear --- */}
-      {/* Nose strut */}
-      <mesh position={[0, -0.7, -3.0]}>
-        <cylinderGeometry args={[0.04, 0.04, 0.6, 6]} />
+      {/* Nose strut
+          Top: fuselage bottom at z=-3.0 => y=-0.525
+          Bottom: wheel center => y=-1.05
+          Length = 0.525, midpoint y = -0.7875, vertical (no rotation) */}
+      <mesh position={[0, -0.7875, -3.0]}>
+        <cylinderGeometry args={[0.04, 0.04, 0.525, 6]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
       {/* Nose wheel */}
@@ -317,14 +336,26 @@ export default function PropPlane() {
       </mesh>
 
       {/* --- Left main gear (under wing) --- */}
-      {/* Left gear strut */}
-      <mesh position={[-1.0, -0.75, -1.5]} rotation={[0, 0, 0.15]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.7, 6]} />
+      {/* Left gear strut
+          Top: (-0.5, -0.55, -1.5) on fuselage bottom
+          Bottom: (-1.1, -1.15, -1.5) wheel center
+          dx=-0.6, dy=-0.6
+          length=sqrt(0.72)=0.849
+          midpoint=(-0.8, -0.85, -1.5)
+          angle=atan2(0.6, 0.6)=0.785 (pi/4) */}
+      <mesh position={[-0.8, -0.85, -1.5]} rotation={[0, 0, 0.785]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.849, 6]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
-      {/* Left gear brace */}
-      <mesh position={[-0.8, -0.65, -1.5]} rotation={[0, 0, -0.3]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.5, 6]} />
+      {/* Left gear brace
+          Top: (-0.15, -0.55, -1.5) fuselage bottom near center
+          Bottom: (-0.8, -0.85, -1.5) meets main strut midpoint
+          dx=-0.65, dy=-0.3
+          length=sqrt(0.5125)=0.716
+          midpoint=(-0.475, -0.7, -1.5)
+          angle=atan2(0.65, 0.3)=1.138 */}
+      <mesh position={[-0.475, -0.7, -1.5]} rotation={[0, 0, 1.138]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.716, 6]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
       {/* Left wheel */}
@@ -344,14 +375,16 @@ export default function PropPlane() {
       </mesh>
 
       {/* --- Right main gear (under wing) --- */}
-      {/* Right gear strut */}
-      <mesh position={[1.0, -0.75, -1.5]} rotation={[0, 0, -0.15]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.7, 6]} />
+      {/* Right gear strut (mirror of left)
+          midpoint=(0.8, -0.85, -1.5), angle=-0.785 */}
+      <mesh position={[0.8, -0.85, -1.5]} rotation={[0, 0, -0.785]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.849, 6]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
-      {/* Right gear brace */}
-      <mesh position={[0.8, -0.65, -1.5]} rotation={[0, 0, 0.3]}>
-        <cylinderGeometry args={[0.03, 0.03, 0.5, 6]} />
+      {/* Right gear brace (mirror of left)
+          midpoint=(0.475, -0.7, -1.5), angle=-1.138 */}
+      <mesh position={[0.475, -0.7, -1.5]} rotation={[0, 0, -1.138]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.716, 6]} />
         <meshStandardMaterial {...chrome} />
       </mesh>
       {/* Right wheel */}
