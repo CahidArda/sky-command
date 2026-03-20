@@ -6,20 +6,19 @@ import * as THREE from "three";
 import { useGameStore } from "@/stores/gameStore";
 
 // ---------------------------------------------------------------------------
-// FlightCamera — smooth chase camera that follows behind the aircraft
+// FlightCamera — chase camera locked behind the aircraft
 //
-// Offset: ~15 m behind, ~5 m above (in local space).
-// Uses lerp for smooth interpolation so the camera doesn't snap.
+// Uses a stiff lerp so the camera stays tightly behind the plane at all times.
+// On the first frame it snaps to position so there's no initial drift.
 // ---------------------------------------------------------------------------
 
-const CHASE_OFFSET = new THREE.Vector3(0, 5, 15); // local offset behind & above
-const LOOK_AHEAD = new THREE.Vector3(0, 1, -20); // look-at point ahead of aircraft
-const LERP_FACTOR = 3; // higher = snappier camera
+const CHASE_OFFSET = new THREE.Vector3(0, 5, 15); // local: behind & above
+const LOOK_AHEAD = new THREE.Vector3(0, 0, -30); // local: ahead of aircraft
+const LERP_FACTOR = 12; // very stiff follow
 
 export default function FlightCamera() {
   const { camera } = useThree();
-  const desiredPos = useRef(new THREE.Vector3());
-  const desiredLookAt = useRef(new THREE.Vector3());
+  const initialized = useRef(false);
 
   useFrame((_, delta) => {
     const { aircraft } = useGameStore.getState();
@@ -27,25 +26,35 @@ export default function FlightCamera() {
 
     // Desired camera position: aircraft position + rotated offset
     const offset = CHASE_OFFSET.clone().applyQuaternion(quat);
-    desiredPos.current.copy(aircraft.position).add(offset);
+    const desiredPos = aircraft.position.clone().add(offset);
 
     // Desired look-at target: a point ahead of the aircraft
     const lookTarget = LOOK_AHEAD.clone().applyQuaternion(quat);
-    desiredLookAt.current.copy(aircraft.position).add(lookTarget);
+    const desiredLookAt = aircraft.position.clone().add(lookTarget);
 
-    // Smooth interpolation
-    const t = 1 - Math.exp(-LERP_FACTOR * delta);
-    camera.position.lerp(desiredPos.current, t);
+    if (!initialized.current) {
+      // Snap on first frame
+      camera.position.copy(desiredPos);
+      initialized.current = true;
+    } else {
+      // Stiff exponential lerp — stays locked behind the aircraft
+      const t = 1 - Math.exp(-LERP_FACTOR * delta);
+      camera.position.lerp(desiredPos, t);
+    }
 
-    // Smooth look-at via slerp of the camera quaternion
-    const targetQuat = new THREE.Quaternion();
+    // Always look at the target point ahead of the aircraft
     const lookMatrix = new THREE.Matrix4().lookAt(
       camera.position,
-      desiredLookAt.current,
+      desiredLookAt,
       new THREE.Vector3(0, 1, 0),
     );
-    targetQuat.setFromRotationMatrix(lookMatrix);
-    camera.quaternion.slerp(targetQuat, t);
+    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(lookMatrix);
+
+    if (!initialized.current) {
+      camera.quaternion.copy(targetQuat);
+    } else {
+      camera.quaternion.slerp(targetQuat, 1 - Math.exp(-LERP_FACTOR * delta));
+    }
   });
 
   return null;

@@ -35,7 +35,7 @@ export default function GameLoop() {
       // W = pitch down (nose down), S = pitch up (nose up)
       pitch: (keys.forward ? -1 : 0) + (keys.back ? 1 : 0),
       // A = roll left, D = roll right
-      roll: (keys.left ? -1 : 0) + (keys.right ? 1 : 0),
+      roll: (keys.left ? 1 : 0) + (keys.right ? -1 : 0),
       // Q = yaw left, E = yaw right
       yaw: (keys.yawLeft ? -1 : 0) + (keys.yawRight ? 1 : 0),
       throttle: throttleRef.current,
