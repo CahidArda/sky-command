@@ -4,6 +4,7 @@ pub mod atmosphere;
 pub mod flight_model;
 
 use crate::aircraft::{Aircraft, ControlInput, Propeller};
+use flight_model::{AERO_YAW_COEFF, Q_CRUISE};
 
 pub struct PhysicsPlugin;
 
@@ -32,7 +33,8 @@ impl Plugin for PhysicsPlugin {
                 update_throttle.in_set(PhysicsSet::Forces),
                 update_angular_velocity.in_set(PhysicsSet::Forces),
                 flight_model::update_flight_physics.in_set(PhysicsSet::Integration),
-                update_aircraft_transform.in_set(PhysicsSet::TransformSync),
+                aerodynamic_yaw.in_set(PhysicsSet::TransformSync),
+                update_aircraft_transform.in_set(PhysicsSet::TransformSync).after(aerodynamic_yaw),
                 spin_propeller.in_set(PhysicsSet::TransformSync),
             ),
         );
@@ -89,6 +91,50 @@ fn update_angular_velocity(
         let roll_rot = Quat::from_axis_angle(Vec3::Z, aircraft.angular_velocity.z * dt);
 
         transform.rotation = transform.rotation * (yaw_rot * pitch_rot * roll_rot);
+        transform.rotation = transform.rotation.normalize();
+    }
+}
+
+/// Aerodynamic yaw: rotates the aircraft nose toward the velocity direction.
+///
+/// When there's sideslip (β ≠ 0), the vertical tail creates a yawing
+/// moment. This is what makes banked turns change heading:
+///   bank → tilted lift curves velocity → β develops → aero yaw rotates nose.
+/// Proportional to dynamic pressure, so it's negligible in a stall.
+fn aerodynamic_yaw(
+    time: Res<Time>,
+    mut query: Query<(&Aircraft, &mut Transform)>,
+) {
+    let dt = time.delta_secs();
+    if dt <= 0.0 {
+        return;
+    }
+
+    for (aircraft, mut transform) in query.iter_mut() {
+        let speed = aircraft.velocity.length();
+        if speed < 1.0 {
+            continue;
+        }
+
+        let altitude = transform.translation.y;
+        let rho = atmosphere::density(altitude);
+        let q = 0.5 * rho * speed * speed;
+
+        let vel_normalized = aircraft.velocity.normalize();
+        let right = transform.right().as_vec3();
+        let up = transform.up().as_vec3();
+
+        // Sideslip angle β
+        let dot_right = vel_normalized.dot(right);
+        let beta = dot_right.clamp(-1.0, 1.0).asin();
+
+        // Yaw rate proportional to β and dynamic pressure
+        let q_scale = q / Q_CRUISE;
+        let aero_yaw_rate = beta * AERO_YAW_COEFF * q_scale;
+
+        // Rotate around the aircraft's local up axis (negate to reduce β)
+        let yaw_rot = Quat::from_axis_angle(up, -aero_yaw_rate * dt);
+        transform.rotation = yaw_rot * transform.rotation;
         transform.rotation = transform.rotation.normalize();
     }
 }

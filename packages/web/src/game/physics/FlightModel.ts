@@ -14,6 +14,8 @@ import {
   STALL_ALPHA,
   CL_MAX,
   SIDE_FORCE_COEFF,
+  AERO_YAW_COEFF,
+  Q_CRUISE,
   PROP_PLANE,
 } from "@/lib/constants";
 
@@ -225,16 +227,47 @@ export function stepFlightModel(
     }
   }
 
-  // ── 4. Derived values ─────────────────────────────────────────────────
+  // ── 4. Aerodynamic yaw (weathervane rotation) ──────────────────────
+  //
+  // The vertical tail creates a YAWING MOMENT that rotates the aircraft
+  // nose toward the velocity direction.  This is what makes banked turns
+  // actually change heading:
+  //   bank → tilted lift curves velocity → sideslip develops →
+  //   aero yaw rotates nose to follow → heading changes.
+  //
+  // Rate is proportional to β × (q / q_cruise), so it's strong at
+  // cruise and negligible in a stall.
 
-  state.airspeed = V;
+  const Vnew = state.velocity.length();
+  if (Vnew > 1) {
+    const velDirNew = state.velocity.clone().normalize();
+    const dotRightNew = velDirNew.dot(right);
+    const betaNew = Math.asin(clamp(dotRightNew, -1, 1));
+
+    const qScale = dynamicPressure / Q_CRUISE;
+    const aeroYawRate = betaNew * AERO_YAW_COEFF * qScale;
+
+    // Apply yaw rotation around the aircraft's local up axis
+    // Negative sign: rotates nose toward velocity (reduces β)
+    const yawDq = new THREE.Quaternion();
+    yawDq.setFromAxisAngle(up, -aeroYawRate * safeDt);
+    quat.premultiply(yawDq);
+    quat.normalize();
+    state.rotation.setFromQuaternion(quat, "YXZ");
+
+    // Recompute forward for heading after the yaw correction
+    forward.set(0, 0, -1).applyQuaternion(quat);
+  }
+
+  // ── 5. Derived values ─────────────────────────────────────────────────
+
+  state.airspeed = Vnew;
   state.altitude = state.position.y;
 
   // Heading: angle of the forward vector projected onto the XZ plane,
   // measured clockwise from north (+Z → 0, +X → 90).
   const fwd2d = new THREE.Vector2(forward.x, forward.z);
   if (fwd2d.length() > 0.001) {
-    // atan2 gives angle from +X axis; we want angle from +Z (north)
     let hdg = Math.atan2(forward.x, forward.z) * (180 / Math.PI);
     if (hdg < 0) hdg += 360;
     state.heading = hdg;

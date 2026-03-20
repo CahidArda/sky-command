@@ -11,8 +11,16 @@ const CL_MAX: f32 = 1.5;
 const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
 
 /// Lateral (sideslip) force coefficient per radian of β.
-/// Models the weathervane effect of fuselage + vertical tail.
-const SIDE_FORCE_COEFF: f32 = 0.8;
+/// Kept moderate so it doesn't fight lift-induced turns.
+const SIDE_FORCE_COEFF: f32 = 0.3;
+
+/// Aerodynamic yaw rate coefficient (rad/s per radian of β at cruise q).
+/// The vertical tail creates a yawing moment that rotates the nose toward
+/// the velocity — this is what makes banked turns change heading.
+pub const AERO_YAW_COEFF: f32 = 2.0;
+
+/// Reference dynamic pressure at cruise (0.5 × ρ₀ × 60²).
+pub const Q_CRUISE: f32 = 0.5 * RHO_SEA_LEVEL * 60.0 * 60.0;
 
 /// Compute coefficient of lift as a function of angle of attack.
 ///
