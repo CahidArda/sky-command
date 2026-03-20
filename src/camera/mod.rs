@@ -71,10 +71,16 @@ fn toggle_camera_mode(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Fli
     }
 }
 
+/// How much the camera look-at point shifts toward the velocity direction.
+/// Higher = more visible AoA/slip offset on screen.
+const LOOK_OFFSET_SCALE: f32 = 8.0;
+/// Maximum look-at offset in meters (prevents aircraft going to screen edge).
+const LOOK_OFFSET_MAX: f32 = 5.0;
+
 /// Update camera position based on mode.
 fn update_flight_camera(
     time: Res<Time>,
-    aircraft_query: Query<&Transform, (With<Aircraft>, Without<FlightCamera>)>,
+    aircraft_query: Query<(&Aircraft, &Transform), Without<FlightCamera>>,
     mut camera_query: Query<(&FlightCamera, &mut Transform), Without<Aircraft>>,
 ) {
     let dt = time.delta_secs();
@@ -82,7 +88,7 @@ fn update_flight_camera(
         return;
     }
 
-    let Ok(aircraft_transform) = aircraft_query.get_single() else {
+    let Ok((aircraft, aircraft_transform)) = aircraft_query.get_single() else {
         return;
     };
 
@@ -95,20 +101,42 @@ fn update_flight_camera(
                 let t = (cam.smoothing * dt).min(1.0);
                 cam_transform.translation = cam_transform.translation.lerp(desired_position, t);
 
+                // Compute AoA/slip-based look-at offset.
+                // The camera looks slightly toward where the aircraft is GOING
+                // (velocity direction), so the aircraft appears shifted on screen
+                // in the direction opposite to the velocity — giving visual
+                // feedback for angle of attack and sideslip.
+                let forward = aircraft_transform.forward().as_vec3();
+                let up = aircraft_transform.up().as_vec3();
+                let right = aircraft_transform.right().as_vec3();
+                let speed = aircraft.velocity.length();
+
+                let look_offset = if speed > 5.0 {
+                    let vel_dir = aircraft.velocity / speed;
+                    // How much velocity deviates from nose in each local axis
+                    let slip = vel_dir.dot(right) - forward.dot(right);
+                    let aoa = -(vel_dir.dot(up) - forward.dot(up));
+                    // Clamp each component
+                    let sx = slip.clamp(-1.0, 1.0) * LOOK_OFFSET_SCALE;
+                    let sy = aoa.clamp(-1.0, 1.0) * LOOK_OFFSET_SCALE;
+                    let offset = right * sx.clamp(-LOOK_OFFSET_MAX, LOOK_OFFSET_MAX)
+                        + up * sy.clamp(-LOOK_OFFSET_MAX, LOOK_OFFSET_MAX);
+                    offset
+                } else {
+                    Vec3::ZERO
+                };
+
+                let look_target = aircraft_transform.translation + look_offset;
+
                 // Choose a camera up vector that avoids degeneracy.
-                // When the look direction is nearly parallel to the aircraft's up
-                // (camera directly above/below), fall back to the aircraft's forward
-                // as the up reference to prevent spinning.
-                let look_dir = (aircraft_transform.translation - cam_transform.translation)
-                    .normalize_or_zero();
-                let aircraft_up = aircraft_transform.up().as_vec3();
+                let look_dir = (look_target - cam_transform.translation).normalize_or_zero();
+                let aircraft_up = up;
                 let cam_up = if look_dir.dot(aircraft_up).abs() > 0.95 {
-                    // Near-degenerate: use forward as fallback up
                     aircraft_transform.forward().as_vec3()
                 } else {
                     aircraft_up
                 };
-                cam_transform.look_at(aircraft_transform.translation, cam_up);
+                cam_transform.look_at(look_target, cam_up);
             }
             CameraMode::Cockpit => {
                 // Snap to cockpit — no interpolation, locked to aircraft

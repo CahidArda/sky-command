@@ -269,11 +269,11 @@ pub fn spawn_aircraft(
                 Transform::from_xyz(-2.70, wing_y, wing_z),
             ));
 
-            // Left wing — outer (mid to tip)
+            // Left wing — outer (mid to tip, overlaps inner by ~0.15m)
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(1.80, 0.09, 2.20))),
+                Mesh3d(meshes.add(Cuboid::new(2.00, 0.09, 2.20))),
                 MeshMaterial3d(camo_light.clone()),
-                Transform::from_xyz(-5.30, wing_y, wing_z + 1.00),
+                Transform::from_xyz(-5.10, wing_y, wing_z + 1.00),
             ));
 
             // Right wing — inner
@@ -283,11 +283,11 @@ pub fn spawn_aircraft(
                 Transform::from_xyz(2.70, wing_y, wing_z),
             ));
 
-            // Right wing — outer
+            // Right wing — outer (mid to tip, overlaps inner by ~0.15m)
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(1.80, 0.09, 2.20))),
+                Mesh3d(meshes.add(Cuboid::new(2.00, 0.09, 2.20))),
                 MeshMaterial3d(camo_light.clone()),
-                Transform::from_xyz(5.30, wing_y, wing_z + 1.00),
+                Transform::from_xyz(5.10, wing_y, wing_z + 1.00),
             ));
 
             // ══════════════════════════════════════════════════════════
