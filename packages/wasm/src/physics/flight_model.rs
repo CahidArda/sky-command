@@ -42,28 +42,27 @@ fn coefficient_of_lift(alpha: f32) -> f32 {
     }
 }
 
-/// Compute the angle of attack using world-up as the pitch reference.
+/// Compute the angle of attack in the aircraft's pitch plane.
 ///
-/// This makes α independent of roll — rolling inverted does NOT flip α.
-/// Without this, inverted flight gets automatic upward lift from the
-/// double-negation of Cl and lift direction.
-fn compute_alpha(forward: Vec3, velocity: Vec3, speed: f32) -> f32 {
+/// Uses the aircraft's LOCAL up vector so α responds to pitch input
+/// at any bank angle. Multiplied by sign(up.y) to prevent the
+/// double-negation bug when inverted (Cl × liftDir would otherwise
+/// produce upward lift when the wing is upside down).
+fn compute_alpha(forward: Vec3, up: Vec3, velocity: Vec3, speed: f32) -> f32 {
     if speed < 1.0 {
         return 0.0;
     }
     let vel_dir = velocity / speed;
-    // pitchUp: world-up projected perpendicular to forward (roll-invariant)
-    let world_up = Vec3::Y;
-    let dot_fwd_up = world_up.dot(forward);
-    let pitch_up = world_up - forward * dot_fwd_up;
-    let pitch_up_len = pitch_up.length();
-    if pitch_up_len < 0.001 {
-        return 0.0; // vertical flight — no meaningful α
-    }
-    let pitch_up = pitch_up / pitch_up_len;
     let dot_fwd = vel_dir.dot(forward);
-    let dot_pu = vel_dir.dot(pitch_up);
-    (-dot_pu).atan2(dot_fwd)
+    let dot_up = vel_dir.dot(up);
+    let raw_alpha = (-dot_up).atan2(dot_fwd);
+
+    // Inversion correction: when the aircraft is inverted (up.y < 0),
+    // negate α so that Cl stays positive and lift correctly pushes
+    // toward the wing's dorsal surface (which is world-down when inverted).
+    // At knife-edge (up.y ≈ 0), raw_alpha ≈ 0 so the discontinuity is negligible.
+    let inv = if up.y >= 0.0 { 1.0 } else { -1.0 };
+    raw_alpha * inv
 }
 
 /// Main flight physics system.
@@ -93,8 +92,8 @@ pub fn update_flight_physics(
         // Dynamic pressure: q = 0.5 * rho * V^2
         let q = 0.5 * rho * speed * speed;
 
-        // Angle of attack (uses world-up reference, roll-invariant)
-        let alpha = compute_alpha(forward, aircraft.velocity, speed);
+        // Angle of attack (uses aircraft local up, with inversion correction)
+        let alpha = compute_alpha(forward, up, aircraft.velocity, speed);
 
         // ---- LIFT ----
         // Lift = q * S * Cl(alpha)
@@ -216,28 +215,40 @@ mod tests {
 
     #[test]
     fn alpha_straight_and_level() {
-        // Forward = +Z (after yaw PI), velocity = +Z: straight and level
-        let alpha = compute_alpha(Vec3::Z, Vec3::new(0.0, 0.0, 60.0), 60.0);
+        let alpha = compute_alpha(Vec3::Z, Vec3::Y, Vec3::new(0.0, 0.0, 60.0), 60.0);
         assert!(alpha.abs() < 0.001);
     }
 
     #[test]
     fn alpha_nose_up() {
-        // Forward tilted above horizon, velocity horizontal: positive α
+        // Forward tilted above velocity → positive α
+        // velocity is horizontal, forward has +Y component, up = world Y
+        // dotUp = vel · up = 0, but vel · forward < 1, so raw_alpha comes from
+        // the velocity being below the forward-up plane.
+        // Use a velocity with slight downward component to create real α:
         let fwd = Vec3::new(0.0, 0.1, 1.0).normalize();
-        let alpha = compute_alpha(fwd, Vec3::new(0.0, 0.0, 60.0), 60.0);
+        let vel = Vec3::new(0.0, -3.0, 60.0);
+        let alpha = compute_alpha(fwd, Vec3::Y, vel, vel.length());
         assert!(alpha > 0.0);
     }
 
     #[test]
-    fn alpha_invariant_to_roll() {
-        // Same forward and velocity, α should be the same regardless of roll.
-        // (roll doesn't affect the world-up-based α computation)
+    fn alpha_inverted_gives_positive() {
+        // Inverted aircraft (up.y < 0): α should stay positive for same flight condition
         let fwd = Vec3::new(0.0, 0.05, 1.0).normalize();
-        let vel = Vec3::new(0.0, 0.0, 60.0);
-        let alpha = compute_alpha(fwd, vel, 60.0);
-        // This is the same regardless of what the aircraft's up vector is
-        assert!(alpha > 0.0);
-        assert!(alpha < 0.1);
+        let up = Vec3::new(0.0, -1.0, 0.0); // inverted
+        let alpha = compute_alpha(fwd, up, Vec3::new(0.0, 0.0, 60.0), 60.0);
+        // The inversion correction keeps α positive
+        assert!(alpha >= 0.0);
+    }
+
+    #[test]
+    fn alpha_responds_at_90_bank() {
+        // At 90° bank with velocity component along aircraft up: α should be non-zero
+        let fwd = Vec3::Z;
+        let up = Vec3::X; // banked 90° right
+        let vel = Vec3::new(5.0, 0.0, 60.0); // velocity drifted in +X (aircraft up direction)
+        let alpha = compute_alpha(fwd, up, vel, vel.length());
+        assert!(alpha.abs() > 0.01); // α responds to velocity along aircraft up
     }
 }

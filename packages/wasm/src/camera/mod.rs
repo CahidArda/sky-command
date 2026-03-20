@@ -100,7 +100,11 @@ fn update_flight_camera(
 
                 let t = (cam.smoothing * dt).min(1.0);
                 cam_transform.translation = cam_transform.translation.lerp(desired_position, t);
-                cam_transform.look_at(aircraft_transform.translation, Vec3::Y);
+
+                // Use the aircraft's up as the camera up reference — prevents
+                // flipping when the aircraft points straight up or down.
+                let cam_up = aircraft_transform.up().as_vec3();
+                cam_transform.look_at(aircraft_transform.translation, cam_up);
             }
             CameraMode::Cockpit => {
                 // Snap to cockpit — no interpolation, locked to aircraft

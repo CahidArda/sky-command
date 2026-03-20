@@ -98,9 +98,10 @@ fn update_angular_velocity(
 
 /// Aerodynamic yaw: rotates the aircraft nose toward the velocity direction.
 ///
-/// Computed in the horizontal plane to avoid sign confusion.
-/// Scaled by bank angle: off when level (rudder is free), full when banked
-/// (nose follows velocity → heading changes during banked turns).
+/// The heading error is computed in the AIRCRAFT'S yaw plane (perpendicular
+/// to the aircraft's local up), and the rotation is applied around the
+/// aircraft's local up axis. This works correctly at all bank angles —
+/// it doesn't create parasitic pitch like world-Y rotation does.
 fn aerodynamic_yaw(
     time: Res<Time>,
     mut query: Query<(&Aircraft, &mut Transform)>,
@@ -124,21 +125,33 @@ fn aerodynamic_yaw(
         let up = transform.up().as_vec3();
         let vel_dir = aircraft.velocity.normalize();
 
-        // Heading error: signed angle from forward to velocity in the XZ plane.
-        // Positive = velocity is clockwise from forward (to the right).
-        let cross = forward.z * vel_dir.x - forward.x * vel_dir.z;
-        let dot2d = forward.x * vel_dir.x + forward.z * vel_dir.z;
-        let heading_error = cross.atan2(dot2d);
+        // Project forward and velocity onto the aircraft's yaw plane
+        // (perpendicular to the aircraft's local up).
+        let fwd_proj = forward - up * forward.dot(up);
+        let vel_proj = vel_dir - up * vel_dir.dot(up);
+
+        let fwd_len = fwd_proj.length();
+        let vel_len = vel_proj.length();
+        if fwd_len < 0.001 || vel_len < 0.001 {
+            continue;
+        }
+
+        let fwd_n = fwd_proj / fwd_len;
+        let vel_n = vel_proj / vel_len;
+
+        // Signed angle from forward to velocity around the up axis
+        let cross = fwd_n.cross(vel_n).dot(up);
+        let dot = fwd_n.dot(vel_n);
+        let heading_error = cross.atan2(dot);
 
         // Bank factor: mostly active when banked, weak when level.
-        // The 0.1 minimum gives a slow heading return after releasing rudder.
         let bank_factor = ((1.0 - up.y * up.y).max(0.0).sqrt()).max(0.1);
 
         let q_scale = q / Q_CRUISE;
         let yaw_rate = heading_error * AERO_YAW_COEFF * q_scale * bank_factor;
 
-        // Rotate around WORLD Y axis — clean, no tilted-axis issues
-        let yaw_rot = Quat::from_rotation_y(yaw_rate * dt);
+        // Rotate around the aircraft's LOCAL up axis
+        let yaw_rot = Quat::from_axis_angle(up, yaw_rate * dt);
         transform.rotation = yaw_rot * transform.rotation;
         transform.rotation = transform.rotation.normalize();
     }
