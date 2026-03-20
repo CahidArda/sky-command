@@ -76,10 +76,16 @@ export const CL_ALPHA_SLOPE = 2 * Math.PI; // ~6.28 /rad
 /** Maximum Cl just before stall */
 export const CL_MAX = CL_ALPHA_SLOPE * STALL_ALPHA; // ~1.64
 
+/** Lateral sideslip force coefficient (per radian of β).
+ *  Pushes velocity toward the nose when there's sideslip.
+ *  Makes rudder actually change flight path, not just heading.
+ *  Kept moderate (0.5) so it only weakly opposes banked turns (~11%). */
+export const SIDE_FORCE_COEFF = 0.5;
+
 /** Aerodynamic yaw rate coefficient.
  *  The vertical tail rotates the nose toward the velocity direction.
- *  Scaled by bank angle (off when level, full when banked) so rudder
- *  freely changes heading in level flight. */
+ *  Mostly active when banked (nose follows turn); weak in level flight
+ *  (slow return after rudder release). */
 export const AERO_YAW_COEFF = 3.0;
 
 /** Reference dynamic pressure at cruise (0.5 × ρ₀ × 60²). */

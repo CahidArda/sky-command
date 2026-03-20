@@ -10,9 +10,13 @@ const CL_MAX: f32 = 1.5;
 /// Stall angle in radians (~15 degrees).
 const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
 
+/// Lateral sideslip force coefficient per radian of β.
+/// Pushes velocity toward the nose. Moderate so it barely opposes banked turns.
+const SIDE_FORCE_COEFF: f32 = 0.5;
+
 /// Aerodynamic yaw rate coefficient (rad/s per radian of heading error at cruise q).
 /// The vertical tail rotates the nose toward the velocity direction.
-/// Scaled by bank angle (off when level, full when banked).
+/// Mostly active when banked; weak in level flight (slow return after rudder).
 pub const AERO_YAW_COEFF: f32 = 3.0;
 
 /// Reference dynamic pressure at cruise (0.5 × ρ₀ × 60²).
@@ -130,11 +134,29 @@ pub fn update_flight_physics(
         let thrust_magnitude = aircraft.throttle * aircraft.max_thrust * density_ratio;
         let thrust_force = forward * thrust_magnitude;
 
+        // ---- SIDESLIP FORCE ----
+        // Pushes velocity toward the nose — makes rudder change flight path.
+        let side_force = if speed > 1.0 {
+            let vel_normalized = aircraft.velocity.normalize();
+            let dot_right = vel_normalized.dot(right);
+            let beta = dot_right.clamp(-1.0, 1.0).asin();
+            let side_force_mag = q * aircraft.wing_area * SIDE_FORCE_COEFF * beta;
+            let side_raw = right - vel_normalized * dot_right;
+            let side_len = side_raw.length();
+            if side_len > 0.001 {
+                (side_raw / side_len) * (-side_force_mag)
+            } else {
+                Vec3::ZERO
+            }
+        } else {
+            Vec3::ZERO
+        };
+
         // ---- WEIGHT ----
         let weight_force = Vec3::new(0.0, -aircraft.mass * G, 0.0);
 
-        // ---- SUM FORCES (only real aerodynamic forces) ----
-        let total_force = lift_force + drag_force + thrust_force + weight_force;
+        // ---- SUM FORCES ----
+        let total_force = lift_force + drag_force + thrust_force + side_force + weight_force;
 
         // ---- ACCELERATION AND INTEGRATION ----
         let acceleration = total_force / aircraft.mass;

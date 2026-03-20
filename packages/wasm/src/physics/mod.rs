@@ -129,8 +129,9 @@ fn aerodynamic_yaw(
         let dot2d = forward.x * vel_dir.x + forward.z * vel_dir.z;
         let heading_error = cross.atan2(dot2d);
 
-        // Bank factor: 0 when level, 1 when knife-edge
-        let bank_factor = (1.0 - up.y * up.y).max(0.0).sqrt();
+        // Bank factor: mostly active when banked, weak when level.
+        // The 0.1 minimum gives a slow heading return after releasing rudder.
+        let bank_factor = ((1.0 - up.y * up.y).max(0.0).sqrt()).max(0.1);
 
         let q_scale = q / Q_CRUISE;
         let yaw_rate = heading_error * AERO_YAW_COEFF * q_scale * bank_factor;

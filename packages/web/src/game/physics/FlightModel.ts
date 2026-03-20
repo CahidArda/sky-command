@@ -24,6 +24,7 @@ import {
   CL_ALPHA_SLOPE,
   STALL_ALPHA,
   CL_MAX,
+  SIDE_FORCE_COEFF,
   AERO_YAW_COEFF,
   Q_CRUISE,
   PROP_PLANE,
@@ -171,6 +172,19 @@ export function stepFlightModel(
 
     // DRAG — opposite to velocity
     force.addScaledVector(velDir, -dragMag);
+
+    // SIDESLIP FORCE — pushes velocity toward nose direction.
+    // Makes rudder actually change the flight path, not just heading.
+    // Moderate coefficient so it only weakly opposes banked turns.
+    const dotRight = velDir.dot(right);
+    const beta = Math.asin(clamp(dotRight, -1, 1));
+    const sideForceMag = dynamicPressure * S * SIDE_FORCE_COEFF * beta;
+    const sideDir = right.clone().addScaledVector(velDir, -dotRight);
+    const sideDirLen = sideDir.length();
+    if (sideDirLen > 0.001) {
+      sideDir.divideScalar(sideDirLen);
+      force.addScaledVector(sideDir, -sideForceMag);
+    }
   }
 
   // WEIGHT — always down
@@ -212,8 +226,9 @@ export function stepFlightModel(
     const dot2d = fwdX * velX + fwdZ * velZ;
     const headingError = Math.atan2(cross, dot2d);
 
-    // Bank factor: 0 when level, 1 when knife-edge
-    const bankFactor = Math.sqrt(Math.max(0, 1 - up.y * up.y));
+    // Bank factor: mostly active when banked, weak when level.
+    // The 0.1 minimum gives a slow heading return after releasing rudder.
+    const bankFactor = Math.max(0.1, Math.sqrt(Math.max(0, 1 - up.y * up.y)));
 
     const qScale = dynamicPressure / Q_CRUISE;
     const yawRate = headingError * AERO_YAW_COEFF * qScale * bankFactor;
