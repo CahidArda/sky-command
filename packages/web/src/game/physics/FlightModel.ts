@@ -119,9 +119,10 @@ export function stepFlightModel(
   quat.normalize();
   state.rotation.setFromQuaternion(quat, "YXZ");
 
-  // Recompute local axes after rotation update
+  // Recompute all local axes after rotation update
   forward.set(0, 0, -1).applyQuaternion(quat);
   up.set(0, 1, 0).applyQuaternion(quat);
+  right.set(1, 0, 0).applyQuaternion(quat);
 
   // ── 2. Aerodynamic forces ─────────────────────────────────────────────
 
@@ -250,16 +251,20 @@ export function stepFlightModel(
  * Create an initial aircraft state — airborne, heading north at cruise speed.
  */
 export function createInitialState(): AircraftState {
-  // Start at 1000 m altitude, heading north (negative Z in Three.js is into screen,
-  // but we define north = +Z so forward = (0,0,-1) after default rotation means
-  // heading south. We'll set rotation so forward = (0,0,1) i.e. heading north.
-  // Euler "YXZ": yaw=PI rotates to face +Z.
-  const rotation = new THREE.Euler(0, Math.PI, 0, "YXZ");
+  // Trim angle of attack: the nose-up pitch needed so Lift ≈ Weight at cruise.
+  // At 60 m/s, 1000 m altitude:  α_trim ≈ 3° ≈ 0.053 rad.
+  // Without this the aircraft starts at α=0 → Cl=0 → zero lift, and banking
+  // has no effect because there is no lift vector to tilt.
+  const TRIM_ALPHA = 0.053;
 
-  // Cruise speed ~60 m/s (~116 knots — roughly 65 % of max)
+  // Euler "YXZ": x=pitch, y=yaw.  Positive x = nose up.
+  // Yaw=PI faces the aircraft north (+Z).
+  const rotation = new THREE.Euler(TRIM_ALPHA, Math.PI, 0, "YXZ");
+
+  // Velocity is horizontal (north) at cruise speed.
+  // The slight pitch-up gives α = TRIM_ALPHA between forward and velocity.
   const cruiseSpeed = 60;
-  const forward = new THREE.Vector3(0, 0, -1).applyEuler(rotation);
-  const velocity = forward.multiplyScalar(cruiseSpeed);
+  const velocity = new THREE.Vector3(0, 0, cruiseSpeed); // horizontal, north
 
   return {
     position: new THREE.Vector3(0, 1000, 0),

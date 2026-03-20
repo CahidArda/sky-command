@@ -65,8 +65,14 @@ pub fn spawn_aircraft(
 
     // Starting position: altitude 1000m, heading north (+Z direction).
     // Bevy's forward is -Z, so rotate PI around Y to face +Z (north).
+    // Add a slight nose-up pitch (~3°) so the aircraft starts at trim α
+    // where Lift ≈ Weight. Without this, α=0 → Cl=0 → no lift, and
+    // banking (tilting lift) has no effect.
+    let trim_alpha: f32 = 0.053; // ~3 degrees
     let start_transform = Transform::from_xyz(0.0, 1000.0, 0.0)
-        .with_rotation(Quat::from_rotation_y(PI));
+        .with_rotation(
+            Quat::from_rotation_y(PI) * Quat::from_rotation_x(trim_alpha),
+        );
 
     commands
         .spawn((
