@@ -42,19 +42,28 @@ fn coefficient_of_lift(alpha: f32) -> f32 {
     }
 }
 
-/// Compute the angle of attack from velocity and aircraft orientation.
+/// Compute the angle of attack using world-up as the pitch reference.
 ///
-/// Alpha is the angle between the velocity vector and the aircraft's
-/// forward direction, measured in the aircraft's pitch plane.
-fn compute_alpha(velocity_local: Vec3) -> f32 {
-    let speed = velocity_local.length();
+/// This makes α independent of roll — rolling inverted does NOT flip α.
+/// Without this, inverted flight gets automatic upward lift from the
+/// double-negation of Cl and lift direction.
+fn compute_alpha(forward: Vec3, velocity: Vec3, speed: f32) -> f32 {
     if speed < 1.0 {
         return 0.0;
     }
-    // In Bevy local space, forward is -Z, up is +Y.
-    // For straight-and-level flight, velocity_local ≈ (0, 0, -speed).
-    // alpha = atan2(-y, -z) so that forward flight gives alpha = 0.
-    (-velocity_local.y).atan2(-velocity_local.z)
+    let vel_dir = velocity / speed;
+    // pitchUp: world-up projected perpendicular to forward (roll-invariant)
+    let world_up = Vec3::Y;
+    let dot_fwd_up = world_up.dot(forward);
+    let pitch_up = world_up - forward * dot_fwd_up;
+    let pitch_up_len = pitch_up.length();
+    if pitch_up_len < 0.001 {
+        return 0.0; // vertical flight — no meaningful α
+    }
+    let pitch_up = pitch_up / pitch_up_len;
+    let dot_fwd = vel_dir.dot(forward);
+    let dot_pu = vel_dir.dot(pitch_up);
+    (-dot_pu).atan2(dot_fwd)
 }
 
 /// Main flight physics system.
@@ -79,16 +88,13 @@ pub fn update_flight_physics(
         let up = transform.up().as_vec3();
         let right = transform.right().as_vec3();
 
-        // Transform velocity into local space for aerodynamic calculations
-        let rotation = transform.rotation;
-        let velocity_local = rotation.inverse() * aircraft.velocity;
         let speed = aircraft.velocity.length();
 
         // Dynamic pressure: q = 0.5 * rho * V^2
         let q = 0.5 * rho * speed * speed;
 
-        // Angle of attack
-        let alpha = compute_alpha(velocity_local);
+        // Angle of attack (uses world-up reference, roll-invariant)
+        let alpha = compute_alpha(forward, aircraft.velocity, speed);
 
         // ---- LIFT ----
         // Lift = q * S * Cl(alpha)
@@ -210,15 +216,28 @@ mod tests {
 
     #[test]
     fn alpha_straight_and_level() {
-        // Velocity purely in forward direction (local -Z in Bevy)
-        let alpha = compute_alpha(Vec3::new(0.0, 0.0, -60.0));
+        // Forward = +Z (after yaw PI), velocity = +Z: straight and level
+        let alpha = compute_alpha(Vec3::Z, Vec3::new(0.0, 0.0, 60.0), 60.0);
         assert!(alpha.abs() < 0.001);
     }
 
     #[test]
     fn alpha_nose_up() {
-        // Velocity has downward component in local space = positive alpha (nose above flight path)
-        let alpha = compute_alpha(Vec3::new(0.0, -10.0, -60.0));
+        // Forward tilted above horizon, velocity horizontal: positive α
+        let fwd = Vec3::new(0.0, 0.1, 1.0).normalize();
+        let alpha = compute_alpha(fwd, Vec3::new(0.0, 0.0, 60.0), 60.0);
         assert!(alpha > 0.0);
+    }
+
+    #[test]
+    fn alpha_invariant_to_roll() {
+        // Same forward and velocity, α should be the same regardless of roll.
+        // (roll doesn't affect the world-up-based α computation)
+        let fwd = Vec3::new(0.0, 0.05, 1.0).normalize();
+        let vel = Vec3::new(0.0, 0.0, 60.0);
+        let alpha = compute_alpha(fwd, vel, 60.0);
+        // This is the same regardless of what the aircraft's up vector is
+        assert!(alpha > 0.0);
+        assert!(alpha < 0.1);
     }
 }

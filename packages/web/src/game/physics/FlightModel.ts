@@ -130,13 +130,31 @@ export function stepFlightModel(
   const V = state.velocity.length();
   const dynamicPressure = 0.5 * rho * V * V;
 
-  // Angle of attack: angle between velocity and forward in the pitch plane
+  // Angle of attack: angle between velocity and forward in the pitch plane.
+  //
+  // CRITICAL: we use WORLD UP as the reference for the pitch plane, NOT
+  // the aircraft's local up.  This makes α independent of roll — rolling
+  // inverted does NOT flip α.  Without this, an inverted aircraft gets
+  // automatic upward lift (Cl negates, direction negates → double negation
+  // = wrong sign).  With the world-up reference, inverted + same pitch
+  // gives the same α → same Cl → but lift direction points toward the
+  // wing top (now downward) → correct -2g when inverted.
   let alpha = 0;
   if (V > 1) {
     const velDir = state.velocity.clone().normalize();
-    const dotFwd = velDir.dot(forward);
-    const dotUp = velDir.dot(up);
-    alpha = Math.atan2(-dotUp, dotFwd);
+
+    // pitchUp: the "up" direction in the pitch plane, derived from world up
+    // projected perpendicular to forward.  This is roll-invariant.
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    const dotFwdUp = worldUp.dot(forward);
+    const pitchUp = worldUp.clone().addScaledVector(forward, -dotFwdUp);
+    const pitchUpLen = pitchUp.length();
+    if (pitchUpLen > 0.001) {
+      pitchUp.divideScalar(pitchUpLen);
+      const dotFwd = velDir.dot(forward);
+      const dotPU = velDir.dot(pitchUp);
+      alpha = Math.atan2(-dotPU, dotFwd);
+    }
   }
 
   const Cl = liftCoefficient(alpha);
