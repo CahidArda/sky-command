@@ -27,3 +27,5 @@ debug/
 
 # Logs
 *.log
+
+.wrangler
