@@ -33,6 +33,25 @@
         }
 
         run();
+
+        // Chrome autoplay policy: resume all AudioContexts after first user gesture.
+        // Bevy/rodio's internal AudioContext gets suspended at creation.
+        // We intercept and resume it on the first click/keydown.
+        const origResume = AudioContext.prototype.resume;
+        const pendingContexts = [];
+        AudioContext.prototype.resume = function() {
+            if (!pendingContexts.includes(this)) pendingContexts.push(this);
+            return origResume.call(this);
+        };
+        function resumeAll() {
+            pendingContexts.forEach(ctx => {
+                if (ctx.state === 'suspended') ctx.resume();
+            });
+            document.removeEventListener('click', resumeAll);
+            document.removeEventListener('keydown', resumeAll);
+        }
+        document.addEventListener('click', resumeAll);
+        document.addEventListener('keydown', resumeAll);
     </script>
 </body>
 </html>
