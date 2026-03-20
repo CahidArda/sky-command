@@ -13,7 +13,12 @@ use state::GameState;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+        .add_plugins(DefaultPlugins
+            .set(AssetPlugin {
+                meta_check: bevy::asset::AssetMetaCheck::Never,
+                ..default()
+            })
+            .set(WindowPlugin {
             primary_window: Some(Window {
                 title: "SkyCommand v0.2.0".into(),
                 canvas: Some("#skycommand-canvas".into()),
