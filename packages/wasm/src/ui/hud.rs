@@ -14,6 +14,10 @@ pub struct HudAltitude;
 #[derive(Component)]
 pub struct HudHeading;
 
+/// Marker for the pitch text element.
+#[derive(Component)]
+pub struct HudPitch;
+
 /// Marker for the throttle text element.
 #[derive(Component)]
 pub struct HudThrottle;
@@ -74,7 +78,21 @@ pub fn spawn_hud(mut commands: Commands) {
         },
     ));
 
-    // Throttle indicator — below heading
+    // Pitch indicator — below heading
+    commands.spawn((
+        HudPitch,
+        Text::new("PIT: 0.0\u{00B0}"),
+        hud_font.clone(),
+        hud_color,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(105.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
+    ));
+
+    // Throttle indicator — below pitch
     commands.spawn((
         HudThrottle,
         Text::new("THR: 0%"),
@@ -82,7 +100,7 @@ pub fn spawn_hud(mut commands: Commands) {
         hud_color,
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Px(105.0),
+            top: Val::Px(135.0),
             left: Val::Px(15.0),
             ..default()
         },
@@ -92,10 +110,11 @@ pub fn spawn_hud(mut commands: Commands) {
 /// Update all HUD text elements from the aircraft state.
 pub fn update_hud(
     aircraft_query: Query<(&Aircraft, &Transform)>,
-    mut speed_query: Query<&mut Text, (With<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudThrottle>)>,
-    mut alt_query: Query<&mut Text, (With<HudAltitude>, Without<HudSpeed>, Without<HudHeading>, Without<HudThrottle>)>,
-    mut hdg_query: Query<&mut Text, (With<HudHeading>, Without<HudSpeed>, Without<HudAltitude>, Without<HudThrottle>)>,
-    mut thr_query: Query<&mut Text, (With<HudThrottle>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>)>,
+    mut speed_query: Query<&mut Text, (With<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
+    mut alt_query: Query<&mut Text, (With<HudAltitude>, Without<HudSpeed>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
+    mut hdg_query: Query<&mut Text, (With<HudHeading>, Without<HudSpeed>, Without<HudAltitude>, Without<HudPitch>, Without<HudThrottle>)>,
+    mut pit_query: Query<&mut Text, (With<HudPitch>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudThrottle>)>,
+    mut thr_query: Query<&mut Text, (With<HudThrottle>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>)>,
 ) {
     let Ok((aircraft, transform)) = aircraft_query.get_single() else {
         return;
@@ -104,7 +123,6 @@ pub fn update_hud(
     let speed_knots = aircraft.velocity.length() * MS_TO_KNOTS;
     let altitude_feet = transform.translation.y * M_TO_FEET;
 
-    // Heading: angle of the forward vector projected onto the XZ plane
     let forward = transform.forward().as_vec3();
     let heading_rad = forward.x.atan2(forward.z);
     let mut heading_deg = heading_rad.to_degrees();
@@ -112,24 +130,23 @@ pub fn update_hud(
         heading_deg += 360.0;
     }
 
+    // Pitch: angle of forward above/below the horizon
+    let pitch_deg = forward.y.asin().to_degrees();
+
     let throttle_pct = aircraft.throttle * 100.0;
 
-    // Update speed
     for mut text in speed_query.iter_mut() {
         **text = format!("SPD: {:.0} kts", speed_knots);
     }
-
-    // Update altitude
     for mut text in alt_query.iter_mut() {
         **text = format!("ALT: {:.0} ft", altitude_feet);
     }
-
-    // Update heading
     for mut text in hdg_query.iter_mut() {
         **text = format!("HDG: {:03.0}\u{00B0}", heading_deg);
     }
-
-    // Update throttle
+    for mut text in pit_query.iter_mut() {
+        **text = format!("PIT: {:.1}\u{00B0}", pitch_deg);
+    }
     for mut text in thr_query.iter_mut() {
         **text = format!("THR: {:.0}%", throttle_pct);
     }
