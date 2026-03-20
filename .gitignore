@@ -1,15 +1,8 @@
-# Dependencies
-node_modules/
-.pnpm-store/
-
 # Build outputs
-packages/web/.next/
-packages/web/out/
-packages/wasm/target/
-packages/wasm/pkg/
-packages/wasm/web/pkg
-packages/wasm/web/assets
-packages/wasm/web/dist/
+target/
+pkg/
+web/pkg
+web/assets
 
 # IDE
 .vscode/
@@ -32,13 +25,5 @@ Thumbs.db
 debug/
 *.d
 
-# WASM
-*.wasm
-!packages/wasm/web/**/*.wasm
-
 # Logs
 *.log
-npm-debug.log*
-
-# Testing
-coverage/

@@ -1,156 +1,117 @@
 # SkyCommand
 
-A 3D flight simulator with realistic aerodynamics, playable in the browser. Fly a Cessna 172 with lift, drag, thrust, and weight modeled from first principles.
+A 3D flight simulator with realistic aerodynamics, running in the browser via WebAssembly. Built with Bevy 0.15 and Rust.
 
-Built as two independent implementations sharing the same flight model and game design:
-
-| Package | Stack | Status |
-|---------|-------|--------|
-| `@skycommand/web` | Next.js 15 + React Three Fiber + Zustand | v0.1.0 |
-| `@skycommand/wasm` | Bevy 0.15 + Rust → WebAssembly | v0.1.0 |
-
-## Tech Stack
-
-### Web (Three.js)
-
-- **Next.js 15** — static export (`output: 'export'`)
-- **React Three Fiber** + **@react-three/drei** — 3D rendering
-- **Zustand** — game state
-- **Tailwind CSS** — HUD styling
-- **TypeScript**
-
-### WASM (Bevy)
-
-- **Bevy 0.15** — ECS game engine
-- **Rust** compiled to `wasm32-unknown-unknown`
-- **wasm-bindgen** — JS interop
-
-### Shared
-
-- **GitHub Actions** — CI + release workflows
-- **Cloudflare Pages** — static hosting
-- **Cloudflare R2** — asset CDN (planned)
-
-## Flight Model
-
-Both implementations share the same physics:
-
-```
-Lift   = 0.5 * rho * V^2 * S * Cl(alpha)
-Drag   = 0.5 * rho * V^2 * S * (Cd0 + Cl^2 / (pi * e * AR))
-Thrust = throttle * max_thrust * (rho / rho_sea_level)
-Weight = mass * g
-```
-
-- ISA atmosphere (density decreases with altitude)
-- Angle of attack computed relative to world up (roll-invariant)
-- Lift direction is always toward the wing's top surface
-- Aerodynamic yaw aligns the nose with the velocity during banked turns
-- Stall modeled above 15 deg AoA
+Choose from three aircraft — Cessna 172, Boeing 737, or F-15 Eagle — each with unique flight characteristics, then fly with full lift/drag/thrust physics, control surface animations, and engine sounds.
 
 ## Controls
 
 | Key | Action |
 |-----|--------|
 | W / S | Pitch (nose down / up) |
-| A / D | Roll (bank) |
+| A / D | Roll (bank left / right) |
 | Q / E | Yaw (rudder) |
 | Shift | Increase throttle |
 | Ctrl | Decrease throttle |
-
-Banking is the primary way to turn — it tilts the lift vector, curving the flight path.
+| C | Toggle chase / cockpit camera |
 
 ## Local Development
 
-### Web package
+### Prerequisites
 
 ```bash
-cd packages/web
-pnpm install
-pnpm dev          # http://localhost:3000
-```
-
-Other commands:
-
-```bash
-pnpm build        # static export → out/
-pnpm type-check   # tsc --noEmit
-pnpm test         # vitest
-pnpm lint         # next lint
-```
-
-### WASM package
-
-```bash
-cd packages/wasm
-
-# prerequisites
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack
+```
 
-# dev build + serve
+### Build and run
+
+```bash
 wasm-pack build --dev --target web
-ln -sf ../pkg web/pkg   # symlink build output into serve root
+ln -sf ../pkg web/pkg
+ln -sf ../assets web/assets
 npx serve web/
+```
 
-# check / test
+Open http://localhost:3000.
+
+### Check / test / lint
+
+```bash
 cargo check
 cargo test
 cargo clippy -- -D warnings
 cargo fmt --check
 ```
 
-## Deployment
+## Deploy to Cloudflare Pages
 
-Both packages deploy as static sites to Cloudflare Pages.
+### Automatic (CI)
 
-| Project | Domain | Build | Output |
-|---------|--------|-------|--------|
-| `skycommand-web` | `skycommand.dev` | `cd packages/web && pnpm build` | `packages/web/out/` |
-| `skycommand-wasm` | `wasm.skycommand.dev` | `cd packages/wasm && wasm-pack build --release --target web` | `packages/wasm/web/` |
+Every push to `main`/`master` triggers the GitHub Actions workflow which:
+1. Runs `cargo fmt`, `clippy`, and tests
+2. Builds the WASM release binary with `wasm-pack`
+3. Deploys `web/` to Cloudflare Pages
 
-### Releasing
+Required GitHub secrets:
+- `CLOUDFLARE_API_TOKEN` — API token with Pages edit permissions
+- `CLOUDFLARE_ACCOUNT_ID` — your Cloudflare account ID
 
-Releases are triggered via GitHub Actions workflow dispatch:
+### Manual
 
 ```bash
-# Bump and release the web package
-gh workflow run release-web.yml -f bump=patch
-
-# Bump and release the WASM package
-gh workflow run release-wasm.yml -f bump=minor
+wasm-pack build --release --target web
+mkdir -p web/pkg web/assets
+cp pkg/* web/pkg/
+cp -r assets/* web/assets/
+npx wrangler pages deploy web --project-name=skycommand
 ```
-
-This bumps the version, tags, builds, creates a GitHub Release, and deploys.
 
 ## Project Structure
 
 ```
 skycommand/
-├── packages/
-│   ├── web/              # Next.js + React Three Fiber
-│   │   ├── src/
-│   │   │   ├── app/      # Next.js pages (landing + game)
-│   │   │   ├── game/     # 3D scene, aircraft, physics, HUD, camera
-│   │   │   ├── stores/   # Zustand game state
-│   │   │   └── lib/      # Constants, version
-│   │   └── package.json
-│   └── wasm/             # Bevy + Rust
-│       ├── src/
-│       │   ├── aircraft/  # Aircraft components + mesh
-│       │   ├── physics/   # Flight model + atmosphere
-│       │   ├── world/     # Terrain + sky
-│       │   ├── ui/        # HUD + version display
-│       │   ├── input/     # Keyboard handling
-│       │   └── camera/    # Chase camera
-│       ├── web/           # HTML host for WASM
-│       └── Cargo.toml
-├── shared/
-│   ├── aircraft/          # Aircraft spec JSONs
-│   └── missions/          # Mission definition JSONs
-├── scripts/               # Version bump, asset sync
-└── .github/workflows/     # CI + release pipelines
+├── src/
+│   ├── main.rs              # Native entry point
+│   ├── lib.rs               # WASM entry point
+│   ├── state.rs             # Game states (Menu / Flying)
+│   ├── aircraft/            # Aircraft specs, meshes, components
+│   │   ├── mod.rs           # Aircraft enum, selection, plugin
+│   │   ├── prop.rs          # Cessna 172
+│   │   ├── airliner.rs      # Boeing 737
+│   │   └── fighter.rs       # F-15 Eagle
+│   ├── physics/             # Flight model
+│   │   ├── flight_model.rs  # Lift, drag, thrust, weight, AoA
+│   │   ├── atmosphere.rs    # ISA atmosphere model
+│   │   └── mod.rs           # Physics systems, aero yaw, animations
+│   ├── world/               # Terrain, sky, environment
+│   ├── camera/              # Chase + cockpit camera
+│   ├── input/               # Keyboard controls
+│   ├── audio/               # Engine sounds per aircraft
+│   └── ui/                  # HUD, menu, version display
+├── web/                     # HTML host for WASM
+│   ├── index.html
+│   └── styles.css
+├── assets/                  # Audio files
+├── shared/                  # Aircraft/mission JSON specs
+├── Cargo.toml
+└── .github/workflows/ci.yml # CI + Cloudflare Pages deploy
 ```
+
+## Flight Model
+
+```
+Lift   = 0.5 * rho * V^2 * S * Cl(alpha)
+Drag   = 0.5 * rho * V^2 * S * (Cd0 + Cl^2/(pi*e*AR) + Cd_separation)
+Thrust = throttle * max_thrust * (rho / rho_sea_level)
+Weight = mass * g
+```
+
+- ISA atmosphere (density decreases with altitude)
+- Angle of attack computed in the aircraft's pitch plane (roll-invariant)
+- Post-stall drag ramps up quadratically (parachute effect)
+- Aerodynamic yaw aligns nose with velocity during banked turns
+- Per-aircraft sideslip force (rudder effectiveness)
 
 ## License
 

@@ -2,33 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      wasm: ${{ steps.changes.outputs.wasm }}
-      web: ${{ steps.changes.outputs.web }}
-      shared: ${{ steps.changes.outputs.shared }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: changes
-        with:
-          filters: |
-            wasm:
-              - 'packages/wasm/**'
-            web:
-              - 'packages/web/**'
-            shared:
-              - 'shared/**'
-
-  ci-wasm:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.wasm == 'true' || needs.detect-changes.outputs.shared == 'true'
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -45,77 +24,57 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            packages/wasm/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/wasm/Cargo.lock') }}
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
       - name: Check formatting
-        working-directory: packages/wasm
         run: cargo fmt --check
 
       - name: Clippy
-        working-directory: packages/wasm
         run: cargo clippy -- -D warnings
 
       - name: Run tests
-        working-directory: packages/wasm
         run: cargo test
 
-      - name: Build WASM
-        working-directory: packages/wasm
-        run: |
-          cargo install wasm-pack --locked || true
-          wasm-pack build --target web
-
-  ci-web:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.web == 'true' || needs.detect-changes.outputs.shared == 'true'
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          version: 9
+          targets: wasm32-unknown-unknown
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache cargo
+        uses: actions/cache@v4
         with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: packages/web/pnpm-lock.yaml
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('Cargo.lock') }}
 
-      - name: Install dependencies
-        working-directory: packages/web
-        run: pnpm install --frozen-lockfile
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
 
-      - name: Lint
-        working-directory: packages/web
-        run: pnpm lint
+      - name: Build WASM (release)
+        run: wasm-pack build --release --target web
 
-      - name: Type check
-        working-directory: packages/web
-        run: pnpm type-check
-
-      - name: Run tests
-        working-directory: packages/web
-        run: pnpm test -- --run
-
-      - name: Build
-        working-directory: packages/web
-        run: pnpm build
-
-  validate-shared:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.shared == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate JSON schemas
+      - name: Prepare deploy directory
         run: |
-          for f in shared/aircraft/*.json shared/missions/*.json; do
-            echo "Validating $f..."
-            python3 -c "import json; json.load(open('$f'))" || exit 1
-          done
-          echo "All JSON files are valid."
+          mkdir -p web/pkg web/assets
+          cp pkg/* web/pkg/
+          cp -r assets/* web/assets/
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy web --project-name=skycommand

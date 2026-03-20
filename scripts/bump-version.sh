@@ -1,19 +1,11 @@
 #!/bin/bash
-# Usage: ./scripts/bump-version.sh <package> <bump>
-# Example: ./scripts/bump-version.sh wasm patch
-#          ./scripts/bump-version.sh web minor
+# Usage: ./scripts/bump-version.sh <bump>
+# Example: ./scripts/bump-version.sh patch
 
-PACKAGE=$1  # wasm | web
-BUMP=$2     # patch | minor | major
+BUMP=$1  # patch | minor | major
+FILE="Cargo.toml"
 
-if [ "$PACKAGE" = "wasm" ]; then
-  FILE="packages/wasm/Cargo.toml"
-  CURRENT=$(grep '^version' "$FILE" | head -1 | sed 's/.*"\(.*\)"/\1/')
-elif [ "$PACKAGE" = "web" ]; then
-  FILE="packages/web/package.json"
-  CURRENT=$(node -p "require('./$FILE').version")
-fi
-
+CURRENT=$(grep '^version' "$FILE" | head -1 | sed 's/.*"\(.*\)"/\1/')
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
 
 case $BUMP in
@@ -23,16 +15,5 @@ case $BUMP in
 esac
 
 NEW="${MAJOR}.${MINOR}.${PATCH}"
-
-if [ "$PACKAGE" = "wasm" ]; then
-  sed -i '' "s/^version = \"$CURRENT\"/version = \"$NEW\"/" "$FILE"
-elif [ "$PACKAGE" = "web" ]; then
-  node -e "
-    const fs = require('fs');
-    const pkg = JSON.parse(fs.readFileSync('$FILE'));
-    pkg.version = '$NEW';
-    fs.writeFileSync('$FILE', JSON.stringify(pkg, null, 2) + '\n');
-  "
-fi
-
+sed -i '' "s/^version = \"$CURRENT\"/version = \"$NEW\"/" "$FILE"
 echo "$NEW"
