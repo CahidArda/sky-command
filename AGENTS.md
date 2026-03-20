@@ -45,8 +45,9 @@ docs: update README with deploy instructions
 
 ```bash
 wasm-pack build --dev --target web
-ln -sf ../pkg web/pkg
-ln -sf ../assets web/assets
+rm -rf web/pkg web/assets
+ln -s ../pkg web/pkg
+ln -s ../assets web/assets
 npx serve web/
 ```
 

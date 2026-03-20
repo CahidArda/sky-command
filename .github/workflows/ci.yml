@@ -65,6 +65,7 @@ jobs:
 
       - name: Prepare deploy directory
         run: |
+          rm -rf web/pkg web/assets
           mkdir -p web/pkg web/assets
           cp pkg/* web/pkg/
           cp -r assets/* web/assets/

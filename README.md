@@ -28,8 +28,9 @@ cargo install wasm-pack
 
 ```bash
 wasm-pack build --dev --target web
-ln -sf ../pkg web/pkg
-ln -sf ../assets web/assets
+rm -rf web/pkg web/assets
+ln -s ../pkg web/pkg
+ln -s ../assets web/assets
 npx serve web/
 ```
 
@@ -61,6 +62,7 @@ Required GitHub secrets:
 
 ```bash
 wasm-pack build --release --target web
+rm -rf web/pkg web/assets
 mkdir -p web/pkg web/assets
 cp pkg/* web/pkg/
 cp -r assets/* web/assets/
