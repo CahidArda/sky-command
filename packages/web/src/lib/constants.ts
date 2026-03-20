@@ -76,6 +76,11 @@ export const CL_ALPHA_SLOPE = 2 * Math.PI; // ~6.28 /rad
 /** Maximum Cl just before stall */
 export const CL_MAX = CL_ALPHA_SLOPE * STALL_ALPHA; // ~1.64
 
+/** Lateral (sideslip) force coefficient (per radian of β).
+ *  Models the weathervane effect of fuselage + vertical tail.
+ *  Typical GA aircraft: 0.5–1.0. Higher = velocity follows heading faster. */
+export const SIDE_FORCE_COEFF = 0.8;
+
 // ---------------------------------------------------------------------------
 // World geometry
 // ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ import {
   CL_ALPHA_SLOPE,
   STALL_ALPHA,
   CL_MAX,
+  SIDE_FORCE_COEFF,
   PROP_PLANE,
 } from "@/lib/constants";
 
@@ -161,22 +162,48 @@ export function stepFlightModel(
   // Thrust — along forward
   force.addScaledVector(forward, thrust);
 
-  // Lift — perpendicular to velocity, in the symmetry plane
   if (V > 1) {
     const velDir = state.velocity.clone().normalize();
-    // Lift direction: component of local-up that is perpendicular to velDir
+
+    // Lift — perpendicular to velocity, in the symmetry plane
     const liftDir = up.clone().addScaledVector(velDir, -up.dot(velDir));
     const liftDirLen = liftDir.length();
     if (liftDirLen > 0.001) {
       liftDir.divideScalar(liftDirLen);
       force.addScaledVector(liftDir, liftMag);
     }
-  }
 
-  // Drag — opposite to velocity
-  if (V > 1) {
-    const dragDir = state.velocity.clone().normalize().negate();
+    // Drag — opposite to velocity
+    const dragDir = velDir.clone().negate();
     force.addScaledVector(dragDir, dragMag);
+
+    // ── Sideslip lateral force (weathervane effect) ───────────────────
+    //
+    // When the aircraft heading differs from the velocity direction, the
+    // fuselage and vertical tail present a lateral area to the airflow.
+    // This generates a side force proportional to:
+    //   - dynamic pressure (so it's weak at low speed / stall)
+    //   - sideslip angle β (angle between velocity and nose in the yaw plane)
+    //
+    // The force pushes the velocity toward alignment with the heading.
+    // It's NOT instant — it's an aerodynamic force that takes time, and
+    // at low speed / stall it has almost no effect.
+
+    const dotRight = velDir.dot(right);
+    const beta = Math.asin(clamp(dotRight, -1, 1));
+
+    // Side force: q × S × Cy_β × β, applied perpendicular to velocity
+    // in the lateral direction, opposing the sideslip
+    const sideForceMag = dynamicPressure * S * SIDE_FORCE_COEFF * beta;
+
+    // Direction: component of right axis perpendicular to velocity
+    const sideDir = right.clone().addScaledVector(velDir, -dotRight);
+    const sideDirLen = sideDir.length();
+    if (sideDirLen > 0.001) {
+      sideDir.divideScalar(sideDirLen);
+      // Negative sign: opposes sideslip (pushes velocity toward nose)
+      force.addScaledVector(sideDir, -sideForceMag);
+    }
   }
 
   // Weight — always down
