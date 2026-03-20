@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 mod aircraft;
+mod audio;
 mod camera;
 mod input;
 mod physics;
@@ -39,6 +40,7 @@ pub fn run() {
             physics::PhysicsPlugin,
             camera::CameraPlugin,
             ui::UiPlugin,
+            audio::AudioPlugin,
         ))
         .run();
 }
