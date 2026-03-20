@@ -10,14 +10,10 @@ const CL_MAX: f32 = 1.5;
 /// Stall angle in radians (~15 degrees).
 const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
 
-/// Lateral (sideslip) force coefficient per radian of β.
-/// Pushes velocity to follow the nose — makes rudder effective.
-const SIDE_FORCE_COEFF: f32 = 1.0;
-
-/// Aerodynamic yaw rate coefficient (rad/s per radian of β at cruise q).
-/// The vertical tail creates a yawing moment that rotates the nose toward
-/// the velocity — this is what makes banked turns change heading.
-pub const AERO_YAW_COEFF: f32 = 2.0;
+/// Aerodynamic yaw rate coefficient (rad/s per radian of heading error at cruise q).
+/// The vertical tail rotates the nose toward the velocity direction.
+/// Scaled by bank angle (off when level, full when banked).
+pub const AERO_YAW_COEFF: f32 = 3.0;
 
 /// Reference dynamic pressure at cruise (0.5 × ρ₀ × 60²).
 pub const Q_CRUISE: f32 = 0.5 * RHO_SEA_LEVEL * 60.0 * 60.0;
@@ -134,36 +130,11 @@ pub fn update_flight_physics(
         let thrust_magnitude = aircraft.throttle * aircraft.max_thrust * density_ratio;
         let thrust_force = forward * thrust_magnitude;
 
-        // ---- SIDESLIP LATERAL FORCE (weathervane effect) ----
-        // When heading differs from velocity direction, the fuselage and
-        // vertical tail generate a lateral force proportional to dynamic
-        // pressure and sideslip angle. Weak at low speed / stall.
-        let side_force = if speed > 1.0 {
-            let vel_normalized = aircraft.velocity.normalize();
-            let dot_right = vel_normalized.dot(right);
-            let beta = dot_right.clamp(-1.0, 1.0).asin();
-
-            let side_force_mag = q * aircraft.wing_area * SIDE_FORCE_COEFF * beta;
-
-            // Direction: component of right perpendicular to velocity
-            let side_raw = right - vel_normalized * dot_right;
-            let side_len = side_raw.length();
-            if side_len > 0.001 {
-                let side_dir = side_raw / side_len;
-                // Opposes sideslip (pushes velocity toward nose direction)
-                side_dir * (-side_force_mag)
-            } else {
-                Vec3::ZERO
-            }
-        } else {
-            Vec3::ZERO
-        };
-
         // ---- WEIGHT ----
         let weight_force = Vec3::new(0.0, -aircraft.mass * G, 0.0);
 
-        // ---- SUM FORCES ----
-        let total_force = lift_force + drag_force + thrust_force + side_force + weight_force;
+        // ---- SUM FORCES (only real aerodynamic forces) ----
+        let total_force = lift_force + drag_force + thrust_force + weight_force;
 
         // ---- ACCELERATION AND INTEGRATION ----
         let acceleration = total_force / aircraft.mass;

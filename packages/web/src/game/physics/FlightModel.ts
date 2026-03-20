@@ -3,6 +3,17 @@
 //
 // All units are SI internally:
 //   position: metres, velocity: m/s, angles: radians, forces: newtons
+//
+// Forces on the aircraft (affect velocity / flight path):
+//   Lift   = 0.5 × ρ × V² × S × Cl(α)   — perpendicular to velocity, toward aircraft top
+//   Drag   = 0.5 × ρ × V² × S × Cd       — opposite to velocity
+//   Thrust = throttle × maxThrust × ρ/ρ₀  — along aircraft forward
+//   Weight = m × g                         — always down
+//
+// Rotation (affects heading / nose direction):
+//   Control input:  pitch/roll/yaw from player
+//   Aerodynamic yaw: nose rotates toward velocity to reduce sideslip
+//                    (proportional to dynamic pressure × bank angle)
 // ---------------------------------------------------------------------------
 
 import * as THREE from "three";
@@ -13,7 +24,6 @@ import {
   CL_ALPHA_SLOPE,
   STALL_ALPHA,
   CL_MAX,
-  SIDE_FORCE_COEFF,
   AERO_YAW_COEFF,
   Q_CRUISE,
   PROP_PLANE,
@@ -21,7 +31,6 @@ import {
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-/** Clamp a value between min and max. */
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
@@ -35,9 +44,9 @@ export function liftCoefficient(alpha: number): number {
   if (absAlpha <= STALL_ALPHA) {
     return CL_ALPHA_SLOPE * alpha;
   }
-  // Post-stall: Cl drops linearly back toward zero
   const sign = Math.sign(alpha);
-  const postStallFraction = 1 - (absAlpha - STALL_ALPHA) / (Math.PI / 2 - STALL_ALPHA);
+  const postStallFraction =
+    1 - (absAlpha - STALL_ALPHA) / (Math.PI / 2 - STALL_ALPHA);
   return sign * CL_MAX * clamp(postStallFraction, 0, 1);
 }
 
@@ -45,14 +54,13 @@ export function liftCoefficient(alpha: number): number {
 
 export interface AircraftState {
   position: THREE.Vector3;
-  /** Euler rotation (pitch, yaw, roll) in intrinsic order "YXZ" */
   rotation: THREE.Euler;
   velocity: THREE.Vector3;
   airspeed: number;
   altitude: number;
   heading: number;
   throttle: number;
-  angularVelocity: THREE.Vector3; // (pitchRate, yawRate, rollRate)
+  angularVelocity: THREE.Vector3;
 }
 
 // ── control input ──────────────────────────────────────────────────────────
@@ -66,11 +74,6 @@ export interface ControlInput {
 
 // ── integrator ─────────────────────────────────────────────────────────────
 
-/**
- * Advance the flight model by `dt` seconds.
- *
- * Mutates `state` in place and returns it for convenience.
- */
 export function stepFlightModel(
   state: AircraftState,
   input: ControlInput,
@@ -88,58 +91,48 @@ export function stepFlightModel(
     yawRate: maxYaw,
   } = PROP_PLANE;
 
-  // Clamp dt to avoid physics explosions after tab-away
   const safeDt = Math.min(dt, 0.05);
 
-  // ── 1. Rotation (control surfaces) ────────────────────────────────────
+  // ── 1. Control-surface rotation ─────────────────────────────────────
 
-  // Build a quaternion from the current Euler so we can rotate vectors
   const quat = new THREE.Quaternion().setFromEuler(state.rotation);
 
-  // Local axes in world space
+  // Local axes in world space (before control input)
   const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(quat);
   const up = new THREE.Vector3(0, 1, 0).applyQuaternion(quat);
   const right = new THREE.Vector3(1, 0, 0).applyQuaternion(quat);
 
-  // Apply angular velocities (exponential map — small angle approx is fine
-  // for the per-frame deltas we deal with)
   const pitchDelta = input.pitch * maxPitch * safeDt;
   const yawDelta = input.yaw * maxYaw * safeDt;
   const rollDelta = input.roll * maxRoll * safeDt;
 
   const dq = new THREE.Quaternion();
-  // Pitch around local right axis
   dq.setFromAxisAngle(right, pitchDelta);
   quat.premultiply(dq);
-  // Yaw around local up axis
   dq.setFromAxisAngle(up, -yawDelta);
   quat.premultiply(dq);
-  // Roll around local forward axis
   dq.setFromAxisAngle(forward, -rollDelta);
   quat.premultiply(dq);
 
   quat.normalize();
   state.rotation.setFromQuaternion(quat, "YXZ");
 
-  // Recompute all local axes after rotation update
+  // Recompute all local axes after control input
   forward.set(0, 0, -1).applyQuaternion(quat);
   up.set(0, 1, 0).applyQuaternion(quat);
   right.set(1, 0, 0).applyQuaternion(quat);
 
-  // ── 2. Aerodynamic forces ─────────────────────────────────────────────
+  // ── 2. Aerodynamic forces (on velocity) ─────────────────────────────
 
   const altitude = Math.max(state.position.y, 0);
   const rho = density(altitude);
-
-  // Airspeed = magnitude of velocity
   const V = state.velocity.length();
-  const dynamicPressure = 0.5 * rho * V * V; // q
+  const dynamicPressure = 0.5 * rho * V * V;
 
-  // Angle of attack: angle between forward vector and velocity
+  // Angle of attack: angle between velocity and forward in the pitch plane
   let alpha = 0;
   if (V > 1) {
     const velDir = state.velocity.clone().normalize();
-    // AoA is the angle in the plane of symmetry: use dot with forward and up
     const dotFwd = velDir.dot(forward);
     const dotUp = velDir.dot(up);
     alpha = Math.atan2(-dotUp, dotFwd);
@@ -149,26 +142,26 @@ export function stepFlightModel(
   const Cd_induced = (Cl * Cl) / (Math.PI * e * AR);
   const Cd = Cd0 + Cd_induced;
 
-  // Lift acts perpendicular to velocity in the plane of symmetry (local up
-  // projected away from velocity direction).
   const liftMag = dynamicPressure * S * Cl;
-  // Drag acts opposite to velocity.
   const dragMag = dynamicPressure * S * Cd;
-
-  // Thrust along forward axis, scaled by density ratio
   const thrust = input.throttle * maxThrust * (rho / SEA_LEVEL_DENSITY);
 
-  // ── Build force vector ────────────────────────────────────────────────
+  // ── Build force vector (only real aerodynamic forces) ───────────────
 
   const force = new THREE.Vector3();
 
-  // Thrust — along forward
+  // Thrust — along aircraft forward
   force.addScaledVector(forward, thrust);
 
   if (V > 1) {
     const velDir = state.velocity.clone().normalize();
 
-    // Lift — perpendicular to velocity, in the symmetry plane
+    // LIFT — perpendicular to velocity, toward aircraft top.
+    // This is the key force for banked turns: when the aircraft banks,
+    // the lift vector tilts with it. The horizontal component of the
+    // tilted lift is what curves the flight path.
+    // At 1g level flight: liftMag ≈ m×g ≈ 10,900 N.
+    // At 45° bank: horizontal component ≈ 7,600 N → turn rate ≈ 6.6°/s.
     const liftDir = up.clone().addScaledVector(velDir, -up.dot(velDir));
     const liftDirLen = liftDir.length();
     if (liftDirLen > 0.001) {
@@ -176,102 +169,70 @@ export function stepFlightModel(
       force.addScaledVector(liftDir, liftMag);
     }
 
-    // Drag — opposite to velocity
-    const dragDir = velDir.clone().negate();
-    force.addScaledVector(dragDir, dragMag);
-
-    // ── Sideslip lateral force (weathervane effect) ───────────────────
-    //
-    // When the aircraft heading differs from the velocity direction, the
-    // fuselage and vertical tail present a lateral area to the airflow.
-    // This generates a side force proportional to:
-    //   - dynamic pressure (so it's weak at low speed / stall)
-    //   - sideslip angle β (angle between velocity and nose in the yaw plane)
-    //
-    // The force pushes the velocity toward alignment with the heading.
-    // It's NOT instant — it's an aerodynamic force that takes time, and
-    // at low speed / stall it has almost no effect.
-
-    const dotRight = velDir.dot(right);
-    const beta = Math.asin(clamp(dotRight, -1, 1));
-
-    // Side force: q × S × Cy_β × β, applied perpendicular to velocity
-    // in the lateral direction, opposing the sideslip
-    const sideForceMag = dynamicPressure * S * SIDE_FORCE_COEFF * beta;
-
-    // Direction: component of right axis perpendicular to velocity
-    const sideDir = right.clone().addScaledVector(velDir, -dotRight);
-    const sideDirLen = sideDir.length();
-    if (sideDirLen > 0.001) {
-      sideDir.divideScalar(sideDirLen);
-      // Negative sign: opposes sideslip (pushes velocity toward nose)
-      force.addScaledVector(sideDir, -sideForceMag);
-    }
+    // DRAG — opposite to velocity
+    force.addScaledVector(velDir, -dragMag);
   }
 
-  // Weight — always down
+  // WEIGHT — always down
   force.y -= mass * GRAVITY;
 
-  // ── 3. Integration (semi-implicit Euler) ──────────────────────────────
+  // ── 3. Integrate velocity and position ──────────────────────────────
 
-  const accel = force.divideScalar(mass);
+  const accel = force.clone().divideScalar(mass);
   state.velocity.addScaledVector(accel, safeDt);
   state.position.addScaledVector(state.velocity, safeDt);
 
-  // Ground collision — simple clamp
+  // Ground collision
   if (state.position.y < 0) {
     state.position.y = 0;
-    // Kill downward velocity
-    if (state.velocity.y < 0) {
-      state.velocity.y = 0;
-    }
+    if (state.velocity.y < 0) state.velocity.y = 0;
   }
 
-  // ── 4. Aerodynamic yaw (weathervane rotation) ──────────────────────
+  // ── 4. Aerodynamic yaw (nose follows velocity) ──────────────────────
   //
-  // The vertical tail creates a YAWING MOMENT that rotates the aircraft
-  // nose toward the velocity direction.  This is what makes banked turns
-  // actually change heading:
-  //   bank → tilted lift curves velocity → sideslip develops →
-  //   aero yaw rotates nose to follow → heading changes.
+  // The vertical tail + fuselage create a yawing moment that aligns the
+  // nose with the velocity direction (reduces sideslip β).
   //
-  // Rate is proportional to β × (q / q_cruise), so it's strong at
-  // cruise and negligible in a stall.
+  // Scaled by bank angle: when level, rudder freely changes heading;
+  // when banked, the nose tracks the velocity so heading follows the turn.
+  //
+  // Computed in the HORIZONTAL PLANE to avoid sign confusion from
+  // tilted aircraft axes.
 
   const Vnew = state.velocity.length();
   if (Vnew > 1) {
+    // Heading error: signed angle from forward to velocity in the XZ plane.
+    // Positive = velocity is clockwise from forward (to the right).
+    const fwdX = forward.x, fwdZ = forward.z;
     const velDirNew = state.velocity.clone().normalize();
-    const dotRightNew = velDirNew.dot(right);
-    const betaNew = Math.asin(clamp(dotRightNew, -1, 1));
+    const velX = velDirNew.x, velZ = velDirNew.z;
+
+    // 2D cross product (fwd × vel projected onto XZ)
+    const cross = fwdZ * velX - fwdX * velZ;
+    const dot2d = fwdX * velX + fwdZ * velZ;
+    const headingError = Math.atan2(cross, dot2d);
+
+    // Bank factor: 0 when level, 1 when knife-edge
+    const bankFactor = Math.sqrt(Math.max(0, 1 - up.y * up.y));
 
     const qScale = dynamicPressure / Q_CRUISE;
+    const yawRate = headingError * AERO_YAW_COEFF * qScale * bankFactor;
 
-    // Scale aero yaw by bank angle: active when banked, off when level.
-    // This way rudder permanently changes heading in level flight,
-    // while banking still turns via the nose-follows-velocity mechanism.
-    // up.y = cos(bankAngle): 1 when level, 0 when knife-edge.
-    const bankFactor = Math.sqrt(Math.max(0, 1 - up.y * up.y));
-    const aeroYawRate = betaNew * AERO_YAW_COEFF * qScale * bankFactor;
-
-    // Apply yaw rotation around the aircraft's local up axis
-    // Negative sign: rotates nose toward velocity (reduces β)
+    // Rotate around WORLD Y — avoids tilted-axis sign issues
     const yawDq = new THREE.Quaternion();
-    yawDq.setFromAxisAngle(up, -aeroYawRate * safeDt);
+    yawDq.setFromAxisAngle(new THREE.Vector3(0, 1, 0), yawRate * safeDt);
     quat.premultiply(yawDq);
     quat.normalize();
     state.rotation.setFromQuaternion(quat, "YXZ");
 
-    // Recompute forward for heading after the yaw correction
     forward.set(0, 0, -1).applyQuaternion(quat);
   }
 
-  // ── 5. Derived values ─────────────────────────────────────────────────
+  // ── 5. Derived values ───────────────────────────────────────────────
 
   state.airspeed = Vnew;
   state.altitude = state.position.y;
 
-  // Heading: angle of the forward vector projected onto the XZ plane,
-  // measured clockwise from north (+Z → 0, +X → 90).
   const fwd2d = new THREE.Vector2(forward.x, forward.z);
   if (fwd2d.length() > 0.001) {
     let hdg = Math.atan2(forward.x, forward.z) * (180 / Math.PI);
@@ -280,30 +241,17 @@ export function stepFlightModel(
   }
 
   state.throttle = input.throttle;
-
   return state;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
 
-/**
- * Create an initial aircraft state — airborne, heading north at cruise speed.
- */
 export function createInitialState(): AircraftState {
-  // Trim angle of attack: the nose-up pitch needed so Lift ≈ Weight at cruise.
-  // At 60 m/s, 1000 m altitude:  α_trim ≈ 3° ≈ 0.053 rad.
-  // Without this the aircraft starts at α=0 → Cl=0 → zero lift, and banking
-  // has no effect because there is no lift vector to tilt.
+  // Trim α ≈ 3° so Lift ≈ Weight at cruise (60 m/s, 1000 m).
   const TRIM_ALPHA = 0.053;
-
-  // Euler "YXZ": x=pitch, y=yaw.  Positive x = nose up.
-  // Yaw=PI faces the aircraft north (+Z).
   const rotation = new THREE.Euler(TRIM_ALPHA, Math.PI, 0, "YXZ");
-
-  // Velocity is horizontal (north) at cruise speed.
-  // The slight pitch-up gives α = TRIM_ALPHA between forward and velocity.
   const cruiseSpeed = 60;
-  const velocity = new THREE.Vector3(0, 0, cruiseSpeed); // horizontal, north
+  const velocity = new THREE.Vector3(0, 0, cruiseSpeed);
 
   return {
     position: new THREE.Vector3(0, 1000, 0),
