@@ -101,9 +101,18 @@ fn update_flight_camera(
                 let t = (cam.smoothing * dt).min(1.0);
                 cam_transform.translation = cam_transform.translation.lerp(desired_position, t);
 
-                // Use the aircraft's up as the camera up reference — prevents
-                // flipping when the aircraft points straight up or down.
-                let cam_up = aircraft_transform.up().as_vec3();
+                // Choose a camera up vector that avoids degeneracy.
+                // When the look direction is nearly parallel to the aircraft's up
+                // (camera directly above/below), fall back to the aircraft's forward
+                // as the up reference to prevent spinning.
+                let look_dir = (aircraft_transform.translation - cam_transform.translation).normalize_or_zero();
+                let aircraft_up = aircraft_transform.up().as_vec3();
+                let cam_up = if look_dir.dot(aircraft_up).abs() > 0.95 {
+                    // Near-degenerate: use forward as fallback up
+                    aircraft_transform.forward().as_vec3()
+                } else {
+                    aircraft_up
+                };
                 cam_transform.look_at(aircraft_transform.translation, cam_up);
             }
             CameraMode::Cockpit => {

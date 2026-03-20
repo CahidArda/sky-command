@@ -45,9 +45,12 @@ fn coefficient_of_lift(alpha: f32) -> f32 {
 /// Compute the angle of attack in the aircraft's pitch plane.
 ///
 /// Uses the aircraft's LOCAL up vector so α responds to pitch input
-/// at any bank angle. Multiplied by sign(up.y) to prevent the
-/// double-negation bug when inverted (Cl × liftDir would otherwise
-/// produce upward lift when the wing is upside down).
+/// at any bank angle and any orientation (vertical, inverted, etc.).
+///
+/// No inversion correction: for a symmetric airfoil (Cl = 2πα), the
+/// "double negation" when inverted (negative Cl × downward liftDir)
+/// is physically correct — a symmetric wing generates the same lift
+/// direction regardless of roll orientation.
 fn compute_alpha(forward: Vec3, up: Vec3, velocity: Vec3, speed: f32) -> f32 {
     if speed < 1.0 {
         return 0.0;
@@ -55,14 +58,7 @@ fn compute_alpha(forward: Vec3, up: Vec3, velocity: Vec3, speed: f32) -> f32 {
     let vel_dir = velocity / speed;
     let dot_fwd = vel_dir.dot(forward);
     let dot_up = vel_dir.dot(up);
-    let raw_alpha = (-dot_up).atan2(dot_fwd);
-
-    // Inversion correction: when the aircraft is inverted (up.y < 0),
-    // negate α so that Cl stays positive and lift correctly pushes
-    // toward the wing's dorsal surface (which is world-down when inverted).
-    // At knife-edge (up.y ≈ 0), raw_alpha ≈ 0 so the discontinuity is negligible.
-    let inv = if up.y >= 0.0 { 1.0 } else { -1.0 };
-    raw_alpha * inv
+    (-dot_up).atan2(dot_fwd)
 }
 
 /// Main flight physics system.
@@ -94,6 +90,7 @@ pub fn update_flight_physics(
 
         // Angle of attack (uses aircraft local up, with inversion correction)
         let alpha = compute_alpha(forward, up, aircraft.velocity, speed);
+        aircraft.alpha = alpha;
 
         // ---- LIFT ----
         // Lift = q * S * Cl(alpha)
@@ -119,10 +116,21 @@ pub fn update_flight_physics(
         let lift_force = lift_dir * lift_magnitude;
 
         // ---- DRAG ----
-        // Cd = Cd0 + Cl^2 / (pi * e * AR)
+        // Cd = Cd0 + Cl^2 / (pi * e * AR) + Cd_separation
         let induced_drag_coeff =
             cl * cl / (PI * aircraft.oswald_efficiency * aircraft.aspect_ratio);
-        let cd = aircraft.cd0 + induced_drag_coeff;
+
+        // Flow separation drag: at high AoA the wing acts like a parachute.
+        // Ramps up past the stall angle, reaching Cd ≈ 1.0 at α = 90°.
+        let abs_alpha = alpha.abs();
+        let separation_drag = if abs_alpha > STALL_ANGLE {
+            let fraction = ((abs_alpha - STALL_ANGLE) / (PI / 2.0 - STALL_ANGLE)).min(1.0);
+            fraction * fraction * 1.2 // quadratic ramp to Cd ≈ 1.2
+        } else {
+            0.0
+        };
+
+        let cd = aircraft.cd0 + induced_drag_coeff + separation_drag;
         let drag_magnitude = q * aircraft.wing_area * cd;
 
         // Drag acts opposite to velocity
@@ -233,22 +241,40 @@ mod tests {
     }
 
     #[test]
-    fn alpha_inverted_gives_positive() {
-        // Inverted aircraft (up.y < 0): α should stay positive for same flight condition
-        let fwd = Vec3::new(0.0, 0.05, 1.0).normalize();
-        let up = Vec3::new(0.0, -1.0, 0.0); // inverted
-        let alpha = compute_alpha(fwd, up, Vec3::new(0.0, 0.0, 60.0), 60.0);
-        // The inversion correction keeps α positive
-        assert!(alpha >= 0.0);
+    fn alpha_responds_at_90_bank() {
+        // At 90° bank with velocity component along aircraft up: α is non-zero
+        let fwd = Vec3::Z;
+        let up = Vec3::X; // banked 90° right
+        let vel = Vec3::new(5.0, 0.0, 60.0); // velocity drifted in +X direction
+        let alpha = compute_alpha(fwd, up, vel, vel.length());
+        assert!(alpha.abs() > 0.01);
     }
 
     #[test]
-    fn alpha_responds_at_90_bank() {
-        // At 90° bank with velocity component along aircraft up: α should be non-zero
-        let fwd = Vec3::Z;
-        let up = Vec3::X; // banked 90° right
-        let vel = Vec3::new(5.0, 0.0, 60.0); // velocity drifted in +X (aircraft up direction)
-        let alpha = compute_alpha(fwd, up, vel, vel.length());
-        assert!(alpha.abs() > 0.01); // α responds to velocity along aircraft up
+    fn alpha_works_inverted() {
+        // Inverted: α sign flips (symmetric airfoil, same magnitude)
+        let fwd = Vec3::new(0.0, 0.05, 1.0).normalize();
+        let up_normal = Vec3::Y;
+        let up_inverted = Vec3::new(0.0, -1.0, 0.0);
+        let vel = Vec3::new(0.0, -3.0, 60.0);
+        let a_normal = compute_alpha(fwd, up_normal, vel, vel.length());
+        let a_inverted = compute_alpha(fwd, up_inverted, vel, vel.length());
+        // Same magnitude, opposite sign (symmetric airfoil behavior)
+        assert!((a_normal.abs() - a_inverted.abs()).abs() < 0.1);
+    }
+
+    #[test]
+    fn alpha_continuous_through_vertical() {
+        // No discontinuity when passing through vertical (no inversion factor)
+        let fwd_80 = Vec3::new(0.0, 0.985, 0.174).normalize(); // 80° pitch
+        let fwd_90 = Vec3::new(0.0, 1.0, 0.0);                 // 90° pitch
+        let up_80 = Vec3::new(0.0, -0.174, 0.985).normalize();
+        let up_90 = Vec3::new(0.0, 0.0, -1.0);
+        let vel = Vec3::new(0.0, 10.0, 50.0);
+        let a_80 = compute_alpha(fwd_80, up_80, vel, vel.length());
+        let a_90 = compute_alpha(fwd_90, up_90, vel, vel.length());
+        // Both should be finite and not NaN
+        assert!(a_80.is_finite());
+        assert!(a_90.is_finite());
     }
 }

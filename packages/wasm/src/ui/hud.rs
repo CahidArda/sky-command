@@ -13,6 +13,8 @@ pub struct HudPitch;
 #[derive(Component)]
 pub struct HudThrottle;
 #[derive(Component)]
+pub struct HudAoA;
+#[derive(Component)]
 pub struct HudWeapons;
 #[derive(Component)]
 pub struct HudAircraftName;
@@ -106,7 +108,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
     commands.spawn((
         HudThrottle,
         Text::new("THR: 0%"),
-        hud_font,
+        hud_font.clone(),
         hud_color,
         Node {
             position_type: PositionType::Absolute,
@@ -116,7 +118,21 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
         },
     ));
 
-    // Weapons display — only for combat aircraft
+    // Angle of Attack
+    commands.spawn((
+        HudAoA,
+        Text::new("AoA: 0.0\u{00B0}"),
+        hud_font,
+        hud_color,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(165.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
+    ));
+
+    // Weapons display — only for combat aircraft (below AoA)
     if selected.0.has_weapons() {
         commands.spawn((
             HudWeapons,
@@ -125,7 +141,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
             TextColor(Color::srgb(1.0, 0.6, 0.0)),
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(170.0),
+                top: Val::Px(200.0),
                 left: Val::Px(15.0),
                 ..default()
             },
@@ -136,11 +152,12 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 /// Update HUD text from aircraft state.
 pub fn update_hud(
     aircraft_query: Query<(&Aircraft, &Transform)>,
-    mut speed_q: Query<&mut Text, (With<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
-    mut alt_q: Query<&mut Text, (With<HudAltitude>, Without<HudSpeed>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
-    mut hdg_q: Query<&mut Text, (With<HudHeading>, Without<HudSpeed>, Without<HudAltitude>, Without<HudPitch>, Without<HudThrottle>)>,
-    mut pit_q: Query<&mut Text, (With<HudPitch>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudThrottle>)>,
-    mut thr_q: Query<&mut Text, (With<HudThrottle>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>)>,
+    mut speed_q: Query<&mut Text, (With<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
+    mut alt_q: Query<&mut Text, (With<HudAltitude>, Without<HudSpeed>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
+    mut hdg_q: Query<&mut Text, (With<HudHeading>, Without<HudSpeed>, Without<HudAltitude>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
+    mut pit_q: Query<&mut Text, (With<HudPitch>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudThrottle>, Without<HudAoA>)>,
+    mut thr_q: Query<&mut Text, (With<HudThrottle>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudAoA>)>,
+    mut aoa_q: Query<&mut Text, (With<HudAoA>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
 ) {
     let Ok((aircraft, transform)) = aircraft_query.get_single() else {
         return;
@@ -156,10 +173,12 @@ pub fn update_hud(
     }
     let pitch_deg = forward.y.asin().to_degrees();
     let throttle_pct = aircraft.throttle * 100.0;
+    let aoa_deg = aircraft.alpha.to_degrees();
 
     for mut t in speed_q.iter_mut() { **t = format!("SPD: {:.0} kts", speed_knots); }
     for mut t in alt_q.iter_mut() { **t = format!("ALT: {:.0} ft", altitude_feet); }
     for mut t in hdg_q.iter_mut() { **t = format!("HDG: {:03.0}\u{00B0}", heading_deg); }
     for mut t in pit_q.iter_mut() { **t = format!("PIT: {:.1}\u{00B0}", pitch_deg); }
     for mut t in thr_q.iter_mut() { **t = format!("THR: {:.0}%", throttle_pct); }
+    for mut t in aoa_q.iter_mut() { **t = format!("AoA: {:.1}\u{00B0}", aoa_deg); }
 }

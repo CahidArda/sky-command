@@ -22,6 +22,8 @@ pub struct Aircraft {
     pub pitch_rate: f32,
     pub roll_rate: f32,
     pub yaw_rate: f32,
+    /// Current angle of attack (radians), updated by flight model each frame.
+    pub alpha: f32,
 }
 
 /// Control input component attached to the aircraft.
