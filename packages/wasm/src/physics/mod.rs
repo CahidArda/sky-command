@@ -234,14 +234,14 @@ fn animate_control_surfaces(
     }
     for (parent, mut tf) in elevator.iter_mut() {
         if let Ok(input) = aircraft_query.get(parent.get()) {
-            let target = Quat::from_rotation_x(input.pitch * MAX_SURFACE_DEFLECTION);
+            let target = Quat::from_rotation_x(-input.pitch * MAX_SURFACE_DEFLECTION);
             tf.rotation = tf.rotation.slerp(target, t);
         }
     }
     // Rudder: compose deflection on top of base rotation (handles canted F-15 tails)
     for (parent, mut tf, rudder_data) in rudder.iter_mut() {
         if let Ok(input) = aircraft_query.get(parent.get()) {
-            let deflection = Quat::from_rotation_y(input.yaw * MAX_SURFACE_DEFLECTION);
+            let deflection = Quat::from_rotation_y(-input.yaw * MAX_SURFACE_DEFLECTION);
             let target = rudder_data.base_rotation * deflection;
             tf.rotation = tf.rotation.slerp(target, t);
         }
