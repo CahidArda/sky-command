@@ -1,0 +1,68 @@
+name: Release Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bump version
+        id: bump
+        run: |
+          NEW_VERSION=$(./scripts/bump-version.sh web ${{ inputs.bump }})
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/web/package.json
+          git commit -m "chore(web): release v${{ steps.bump.outputs.version }}"
+
+      - name: Create tag
+        run: git tag "web-v${{ steps.bump.outputs.version }}"
+
+      - name: Push
+        run: git push && git push --tags
+
+      - name: Install dependencies
+        working-directory: packages/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        working-directory: packages/web
+        run: pnpm build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "web-v${{ steps.bump.outputs.version }}"
+          name: "@skycommand/web v${{ steps.bump.outputs.version }}"
+          generate_release_notes: true

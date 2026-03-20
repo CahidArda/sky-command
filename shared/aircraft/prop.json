@@ -1,0 +1,20 @@
+{
+  "id": "prop",
+  "name": "Cessna 172",
+  "description": "A reliable single-engine prop plane. Easy to fly, perfect for ferry missions.",
+  "maxSpeed": 180,
+  "ceiling": 15000,
+  "climbRate": 1000,
+  "agility": "high",
+  "weapons": [],
+  "wingArea": 16.2,
+  "mass": 1111,
+  "maxThrust": 3500,
+  "cd0": 0.027,
+  "oswaldEfficiency": 0.8,
+  "aspectRatio": 7.32,
+  "pitchRate": 60,
+  "rollRate": 90,
+  "yawRate": 30,
+  "missions": ["ferry"]
+}

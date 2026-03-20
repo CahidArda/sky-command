@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+packages/web/.next/
+packages/web/out/
+packages/wasm/target/
+packages/wasm/pkg/
+packages/wasm/web/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Rust
+*.pdb
+debug/
+*.d
+
+# WASM
+*.wasm
+!packages/wasm/web/**/*.wasm
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkyCommand v0.1.0</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div id="loading">
+        <div class="spinner"></div>
+        <p>Loading SkyCommand...</p>
+    </div>
+    <canvas id="skycommand-canvas"></canvas>
+    <script type="module">
+        import init from '../pkg/skycommand_wasm.js';
+
+        async function run() {
+            try {
+                await init();
+                document.getElementById('loading').style.display = 'none';
+            } catch (error) {
+                const loading = document.getElementById('loading');
+                loading.innerHTML = '<p class="error">Failed to load SkyCommand: ' + error.message + '</p>';
+                console.error('Failed to initialize WASM:', error);
+            }
+        }
+
+        run();
+    </script>
+</body>
+</html>

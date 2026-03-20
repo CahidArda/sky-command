@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Aircraft Specification",
+  "type": "object",
+  "required": ["id", "name", "maxSpeed", "ceiling", "climbRate", "agility", "wingArea", "mass", "maxThrust", "cd0", "oswaldEfficiency", "aspectRatio"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "maxSpeed": { "type": "number", "description": "Max speed in knots" },
+    "ceiling": { "type": "number", "description": "Service ceiling in feet" },
+    "climbRate": { "type": "number", "description": "Max climb rate in ft/min" },
+    "agility": { "type": "string", "enum": ["low", "medium", "high", "very_high"] },
+    "weapons": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "wingArea": { "type": "number", "description": "Wing area in m²" },
+    "mass": { "type": "number", "description": "Mass in kg" },
+    "maxThrust": { "type": "number", "description": "Max thrust in Newtons" },
+    "cd0": { "type": "number", "description": "Parasitic drag coefficient" },
+    "oswaldEfficiency": { "type": "number", "description": "Oswald efficiency factor" },
+    "aspectRatio": { "type": "number", "description": "Wing aspect ratio" },
+    "pitchRate": { "type": "number", "description": "Max pitch rate in deg/s" },
+    "rollRate": { "type": "number", "description": "Max roll rate in deg/s" },
+    "yawRate": { "type": "number", "description": "Max yaw rate in deg/s" },
+    "missions": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Mission Definition",
+  "type": "object",
+  "required": ["id", "type", "name", "description", "aircraft", "waypoints"],
+  "properties": {
+    "id": { "type": "string" },
+    "type": { "type": "string", "enum": ["ferry", "intercept", "naval_strike", "facility"] },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "aircraft": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "waypoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "position": {
+            "type": "array",
+            "items": { "type": "number" },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      }
+    },
+    "startPosition": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "startHeading": { "type": "number" }
+  }
+}

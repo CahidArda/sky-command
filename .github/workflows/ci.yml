@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      wasm: ${{ steps.changes.outputs.wasm }}
+      web: ${{ steps.changes.outputs.web }}
+      shared: ${{ steps.changes.outputs.shared }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            wasm:
+              - 'packages/wasm/**'
+            web:
+              - 'packages/web/**'
+            shared:
+              - 'shared/**'
+
+  ci-wasm:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.wasm == 'true' || needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            packages/wasm/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('packages/wasm/Cargo.lock') }}
+
+      - name: Check formatting
+        working-directory: packages/wasm
+        run: cargo fmt --check
+
+      - name: Clippy
+        working-directory: packages/wasm
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        working-directory: packages/wasm
+        run: cargo test
+
+      - name: Build WASM
+        working-directory: packages/wasm
+        run: |
+          cargo install wasm-pack --locked || true
+          wasm-pack build --target web
+
+  ci-web:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web == 'true' || needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: packages/web/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: packages/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: packages/web
+        run: pnpm lint
+
+      - name: Type check
+        working-directory: packages/web
+        run: pnpm type-check
+
+      - name: Run tests
+        working-directory: packages/web
+        run: pnpm test -- --run
+
+      - name: Build
+        working-directory: packages/web
+        run: pnpm build
+
+  validate-shared:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.shared == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON schemas
+        run: |
+          for f in shared/aircraft/*.json shared/missions/*.json; do
+            echo "Validating $f..."
+            python3 -c "import json; json.load(open('$f'))" || exit 1
+          done
+          echo "All JSON files are valid."
