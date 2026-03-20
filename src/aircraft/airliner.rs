@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput, AileronLeft, AileronRight, Elevator, Rudder};
+use super::{AileronLeft, AileronRight, Aircraft, ControlInput, Elevator, Rudder};
 
 /// Boeing 737-style airliner specifications.
 pub fn default_aircraft() -> Aircraft {
@@ -20,7 +20,8 @@ pub fn default_aircraft() -> Aircraft {
         yaw_rate: 15.0_f32.to_radians(),
         side_force_coeff: 1.5,
         alpha: 0.0,
-        g_load: 1.0,    }
+        g_load: 1.0,
+    }
 }
 
 /// Spawn the airliner at altitude 1000m heading north.
@@ -242,8 +243,7 @@ pub fn spawn_aircraft(
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(2.20, 1.20, 0.06))),
                 MeshMaterial3d(windshield_mat.clone()),
-                Transform::from_xyz(0.0, 0.70, -16.80)
-                    .with_rotation(Quat::from_rotation_x(-0.40)),
+                Transform::from_xyz(0.0, 0.70, -16.80).with_rotation(Quat::from_rotation_x(-0.40)),
             ));
 
             // Left cockpit side window
@@ -494,7 +494,9 @@ pub fn spawn_aircraft(
 
             // Rudder — trailing edge of vertical stabilizer
             parent.spawn((
-                Rudder { base_rotation: Quat::IDENTITY },
+                Rudder {
+                    base_rotation: Quat::IDENTITY,
+                },
                 Mesh3d(meshes.add(Cuboid::new(0.08, 4.0, 0.8))),
                 MeshMaterial3d(ctrl_surface_mat.clone()),
                 Transform::from_xyz(0.0, 3.80, 17.30),

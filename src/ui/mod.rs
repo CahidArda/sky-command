@@ -24,7 +24,10 @@ impl Plugin for UiPlugin {
             )
             .add_systems(OnExit(GameState::Menu), menu::despawn_menu)
             // Flying state — HUD
-            .add_systems(OnEnter(GameState::Flying), (hud::spawn_hud, version::spawn_version_display))
+            .add_systems(
+                OnEnter(GameState::Flying),
+                (hud::spawn_hud, version::spawn_version_display),
+            )
             .add_systems(
                 Update,
                 hud::update_hud

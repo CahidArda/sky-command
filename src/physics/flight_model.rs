@@ -63,10 +63,7 @@ fn compute_alpha(forward: Vec3, up: Vec3, velocity: Vec3, speed: f32) -> f32 {
 ///
 /// Computes lift, drag, thrust, and weight forces, then integrates
 /// velocity. All computation is in SI units.
-pub fn update_flight_physics(
-    time: Res<Time>,
-    mut query: Query<(&mut Aircraft, &Transform)>,
-) {
+pub fn update_flight_physics(time: Res<Time>, mut query: Query<(&mut Aircraft, &Transform)>) {
     let dt = time.delta_secs();
     if dt <= 0.0 || dt > 0.1 {
         return; // Skip bad timesteps
@@ -268,7 +265,7 @@ mod tests {
     fn alpha_continuous_through_vertical() {
         // No discontinuity when passing through vertical (no inversion factor)
         let fwd_80 = Vec3::new(0.0, 0.985, 0.174).normalize(); // 80° pitch
-        let fwd_90 = Vec3::new(0.0, 1.0, 0.0);                 // 90° pitch
+        let fwd_90 = Vec3::new(0.0, 1.0, 0.0); // 90° pitch
         let up_80 = Vec3::new(0.0, -0.174, 0.985).normalize();
         let up_90 = Vec3::new(0.0, 0.0, -1.0);
         let vel = Vec3::new(0.0, 10.0, 50.0);

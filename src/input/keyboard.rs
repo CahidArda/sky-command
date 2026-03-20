@@ -10,10 +10,7 @@ use crate::aircraft::ControlInput;
 /// - Q / E: Yaw (Q = yaw left, E = yaw right)
 /// - Shift: Increase throttle
 /// - Ctrl: Decrease throttle
-pub fn handle_keyboard_input(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut ControlInput>,
-) {
+pub fn handle_keyboard_input(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut ControlInput>) {
     for mut input in query.iter_mut() {
         // Reset inputs each frame
         input.pitch = 0.0;

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput, AileronLeft, AileronRight, Elevator, Rudder};
+use super::{AileronLeft, AileronRight, Aircraft, ControlInput, Elevator, Rudder};
 
 /// F-15 Eagle specifications.
 pub fn default_aircraft() -> Aircraft {
@@ -20,7 +20,8 @@ pub fn default_aircraft() -> Aircraft {
         yaw_rate: 45.0_f32.to_radians(),
         side_force_coeff: 3.0,
         alpha: 0.0,
-        g_load: 1.0,    }
+        g_load: 1.0,
+    }
 }
 
 /// Spawn an F-15 Eagle at altitude 1000 m heading north.
@@ -201,8 +202,7 @@ pub fn spawn_aircraft(
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.80, 0.45, 0.04))),
                 MeshMaterial3d(canopy_mat.clone()),
-                Transform::from_xyz(0.0, 0.95, -6.90)
-                    .with_rotation(Quat::from_rotation_x(-0.45)),
+                Transform::from_xyz(0.0, 0.95, -6.90).with_rotation(Quat::from_rotation_x(-0.45)),
             ));
 
             // ══════════════════════════════════════════════════════════
@@ -517,21 +517,23 @@ pub fn spawn_aircraft(
             // Left rudder
             let left_cant = Quat::from_rotation_z(vtail_cant);
             parent.spawn((
-                Rudder { base_rotation: left_cant },
+                Rudder {
+                    base_rotation: left_cant,
+                },
                 Mesh3d(meshes.add(Cuboid::new(0.06, 2.20, 0.55))),
                 MeshMaterial3d(ctrl_surface_mat.clone()),
-                Transform::from_xyz(-1.30, 2.10, vtail_z + 1.75)
-                    .with_rotation(left_cant),
+                Transform::from_xyz(-1.30, 2.10, vtail_z + 1.75).with_rotation(left_cant),
             ));
 
             // Right rudder
             let right_cant = Quat::from_rotation_z(-vtail_cant);
             parent.spawn((
-                Rudder { base_rotation: right_cant },
+                Rudder {
+                    base_rotation: right_cant,
+                },
                 Mesh3d(meshes.add(Cuboid::new(0.06, 2.20, 0.55))),
                 MeshMaterial3d(ctrl_surface_mat.clone()),
-                Transform::from_xyz(1.30, 2.10, vtail_z + 1.75)
-                    .with_rotation(right_cant),
+                Transform::from_xyz(1.30, 2.10, vtail_z + 1.75).with_rotation(right_cant),
             ));
         });
 }

@@ -22,8 +22,8 @@ pub fn spawn_sky(mut commands: Commands) {
         },
         Transform::from_rotation(Quat::from_euler(
             EulerRot::XYZ,
-            -0.8,  // tilt down
-            0.4,   // rotate around Y
+            -0.8, // tilt down
+            0.4,  // rotate around Y
             0.0,
         )),
     ));

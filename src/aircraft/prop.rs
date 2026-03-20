@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput, Propeller, AileronLeft, AileronRight, Elevator, Rudder};
+use super::{AileronLeft, AileronRight, Aircraft, ControlInput, Elevator, Propeller, Rudder};
 
 /// Prop plane specifications matching a Cessna 172-like aircraft.
 pub fn default_aircraft() -> Aircraft {
@@ -20,7 +20,8 @@ pub fn default_aircraft() -> Aircraft {
         yaw_rate: 30.0_f32.to_radians(),
         side_force_coeff: 2.0,
         alpha: 0.0,
-        g_load: 1.0,    }
+        g_load: 1.0,
+    }
 }
 
 /// Spawn the prop plane aircraft at altitude 1000m heading north.
@@ -96,9 +97,7 @@ pub fn spawn_aircraft(
 
     let trim_alpha: f32 = 0.053;
     let start_transform = Transform::from_xyz(0.0, 1000.0, 0.0)
-        .with_rotation(
-            Quat::from_rotation_y(PI) * Quat::from_rotation_x(trim_alpha),
-        );
+        .with_rotation(Quat::from_rotation_y(PI) * Quat::from_rotation_x(trim_alpha));
 
     commands
         .spawn((
@@ -202,20 +201,12 @@ pub fn spawn_aircraft(
                 (2.00, 0.60, 0.49),
             ] {
                 parent.spawn((
-                    Mesh3d(meshes.add(Cuboid::new(
-                        stripe_thickness,
-                        0.06,
-                        half_len * 2.0,
-                    ))),
+                    Mesh3d(meshes.add(Cuboid::new(stripe_thickness, 0.06, half_len * 2.0))),
                     MeshMaterial3d(accent2_mat.clone()),
                     Transform::from_xyz(-half_w, stripe_y - 0.10, z),
                 ));
                 parent.spawn((
-                    Mesh3d(meshes.add(Cuboid::new(
-                        stripe_thickness,
-                        0.06,
-                        half_len * 2.0,
-                    ))),
+                    Mesh3d(meshes.add(Cuboid::new(stripe_thickness, 0.06, half_len * 2.0))),
                     MeshMaterial3d(accent2_mat.clone()),
                     Transform::from_xyz(half_w, stripe_y - 0.10, z),
                 ));
@@ -235,16 +226,14 @@ pub fn spawn_aircraft(
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.90, 0.45, 0.04))),
                 MeshMaterial3d(windshield_mat.clone()),
-                Transform::from_xyz(0.0, 0.68, -1.18)
-                    .with_rotation(Quat::from_rotation_x(-0.45)),
+                Transform::from_xyz(0.0, 0.68, -1.18).with_rotation(Quat::from_rotation_x(-0.45)),
             ));
 
             // Rear window — slightly angled back
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.80, 0.35, 0.04))),
                 MeshMaterial3d(windshield_mat.clone()),
-                Transform::from_xyz(0.0, 0.68, 0.62)
-                    .with_rotation(Quat::from_rotation_x(0.35)),
+                Transform::from_xyz(0.0, 0.68, 0.62).with_rotation(Quat::from_rotation_x(0.35)),
             ));
 
             // Side windows (left)
@@ -546,7 +535,9 @@ pub fn spawn_aircraft(
             // Rudder — trailing edge of vertical stabilizer
             // Vertical stab at X=0, main fin Y=0.95, Z=3.90
             parent.spawn((
-                Rudder { base_rotation: Quat::IDENTITY },
+                Rudder {
+                    base_rotation: Quat::IDENTITY,
+                },
                 Mesh3d(meshes.add(Cuboid::new(0.06, 1.0, 0.35))),
                 MeshMaterial3d(ctrl_surface_mat.clone()),
                 Transform::from_xyz(0.0, 1.2, 4.50),

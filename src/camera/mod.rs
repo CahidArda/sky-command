@@ -39,18 +39,15 @@ pub struct CameraSet;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.configure_sets(
-            Update,
-            CameraSet.after(PhysicsSet::TransformSync),
-        )
-        .add_systems(Startup, spawn_camera)
-        .add_systems(
-            Update,
-            (toggle_camera_mode, update_flight_camera)
-                .chain()
-                .in_set(CameraSet)
-                .run_if(in_state(GameState::Flying)),
-        );
+        app.configure_sets(Update, CameraSet.after(PhysicsSet::TransformSync))
+            .add_systems(Startup, spawn_camera)
+            .add_systems(
+                Update,
+                (toggle_camera_mode, update_flight_camera)
+                    .chain()
+                    .in_set(CameraSet)
+                    .run_if(in_state(GameState::Flying)),
+            );
     }
 }
 
@@ -63,10 +60,7 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 /// Toggle camera mode with C key.
-fn toggle_camera_mode(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut FlightCamera>,
-) {
+fn toggle_camera_mode(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut FlightCamera>) {
     if keys.just_pressed(KeyCode::KeyC) {
         for mut cam in query.iter_mut() {
             cam.mode = match cam.mode {
@@ -105,7 +99,8 @@ fn update_flight_camera(
                 // When the look direction is nearly parallel to the aircraft's up
                 // (camera directly above/below), fall back to the aircraft's forward
                 // as the up reference to prevent spinning.
-                let look_dir = (aircraft_transform.translation - cam_transform.translation).normalize_or_zero();
+                let look_dir = (aircraft_transform.translation - cam_transform.translation)
+                    .normalize_or_zero();
                 let aircraft_up = aircraft_transform.up().as_vec3();
                 let cam_up = if look_dir.dot(aircraft_up).abs() > 0.95 {
                     // Near-degenerate: use forward as fallback up

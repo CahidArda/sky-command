@@ -133,10 +133,7 @@ pub fn spawn_menu(mut commands: Commands) {
 
 /// Handle button clicks — select aircraft and transition to Flying.
 pub fn handle_menu_buttons(
-    interaction_query: Query<
-        (&Interaction, &AircraftButton),
-        (Changed<Interaction>, With<Button>),
-    >,
+    interaction_query: Query<(&Interaction, &AircraftButton), (Changed<Interaction>, With<Button>)>,
     mut selected: ResMut<SelectedAircraft>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
@@ -150,7 +147,10 @@ pub fn handle_menu_buttons(
 
 /// Update button colors on hover.
 pub fn update_button_colors(
-    mut query: Query<(&Interaction, &mut BackgroundColor), (Changed<Interaction>, With<AircraftButton>)>,
+    mut query: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<AircraftButton>),
+    >,
 ) {
     for (interaction, mut bg) in query.iter_mut() {
         *bg = match interaction {

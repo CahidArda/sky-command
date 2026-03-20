@@ -213,7 +213,18 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 pub fn update_hud(
     time: Res<Time>,
     aircraft_query: Query<(&Aircraft, &Transform)>,
-    mut text_query: Query<(&mut Text, Option<&HudSpeed>, Option<&HudAltitude>, Option<&HudHeading>, Option<&HudPitch>, Option<&HudThrottle>, Option<&HudAoA>, Option<&HudVSpeed>, Option<&HudGLoad>, Option<&HudStallWarning>)>,
+    mut text_query: Query<(
+        &mut Text,
+        Option<&HudSpeed>,
+        Option<&HudAltitude>,
+        Option<&HudHeading>,
+        Option<&HudPitch>,
+        Option<&HudThrottle>,
+        Option<&HudAoA>,
+        Option<&HudVSpeed>,
+        Option<&HudGLoad>,
+        Option<&HudStallWarning>,
+    )>,
 ) {
     let Ok((aircraft, transform)) = aircraft_query.get_single() else {
         return;
@@ -239,12 +250,24 @@ pub fn update_hud(
     let g_load = aircraft.g_load;
 
     for (mut text, spd, alt, hdg, pit, thr, aoa, vs, gload, stall) in text_query.iter_mut() {
-        if spd.is_some() { **text = format!("SPD: {:.0} kts", speed_knots); }
-        if alt.is_some() { **text = format!("ALT: {:.0} ft", altitude_feet); }
-        if hdg.is_some() { **text = format!("HDG: {:03.0}deg", heading_deg); }
-        if pit.is_some() { **text = format!("PIT: {:.1}deg", pitch_deg); }
-        if thr.is_some() { **text = format!("THR: {:.0}%", throttle_pct); }
-        if aoa.is_some() { **text = format!("AoA: {:.1}deg", aoa_deg); }
+        if spd.is_some() {
+            **text = format!("SPD: {:.0} kts", speed_knots);
+        }
+        if alt.is_some() {
+            **text = format!("ALT: {:.0} ft", altitude_feet);
+        }
+        if hdg.is_some() {
+            **text = format!("HDG: {:03.0}deg", heading_deg);
+        }
+        if pit.is_some() {
+            **text = format!("PIT: {:.1}deg", pitch_deg);
+        }
+        if thr.is_some() {
+            **text = format!("THR: {:.0}%", throttle_pct);
+        }
+        if aoa.is_some() {
+            **text = format!("AoA: {:.1}deg", aoa_deg);
+        }
         if vs.is_some() {
             **text = format!("V/S: {:.0} fpm", vspeed_fpm);
         }
@@ -252,7 +275,11 @@ pub fn update_hud(
             **text = format!("G: {:.1}", g_load);
         }
         if stall.is_some() {
-            **text = if show_stall { "STALL".to_string() } else { String::new() };
+            **text = if show_stall {
+                "STALL".to_string()
+            } else {
+                String::new()
+            };
         }
     }
 }
