@@ -16,7 +16,7 @@ pub struct ChaseCamera {
 impl Default for ChaseCamera {
     fn default() -> Self {
         Self {
-            offset: Vec3::new(0.0, 5.0, -15.0),
+            offset: Vec3::new(0.0, 8.0, 25.0),
             smoothing: 3.0,
         }
     }
@@ -44,7 +44,7 @@ fn spawn_chase_camera(mut commands: Commands) {
     commands.spawn((
         ChaseCamera::default(),
         Camera3d::default(),
-        Transform::from_xyz(0.0, 1005.0, -15.0).looking_at(Vec3::new(0.0, 1000.0, 0.0), Vec3::Y),
+        Transform::from_xyz(0.0, 1008.0, -25.0).looking_at(Vec3::new(0.0, 1000.0, 0.0), Vec3::Y),
     ));
 }
 

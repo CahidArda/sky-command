@@ -21,28 +21,28 @@ pub fn handle_keyboard_input(
         input.yaw = 0.0;
         input.throttle_change = 0.0;
 
-        // Pitch: W = nose up (positive pitch), S = nose down (negative pitch)
+        // Pitch: W = nose down (push stick forward), S = nose up (pull back)
         if keys.pressed(KeyCode::KeyW) {
-            input.pitch += 1.0;
-        }
-        if keys.pressed(KeyCode::KeyS) {
             input.pitch -= 1.0;
         }
-
-        // Roll: A = roll left (negative), D = roll right (positive)
-        if keys.pressed(KeyCode::KeyA) {
-            input.roll -= 1.0;
+        if keys.pressed(KeyCode::KeyS) {
+            input.pitch += 1.0;
         }
-        if keys.pressed(KeyCode::KeyD) {
+
+        // Roll: A = bank left, D = bank right (matches web version)
+        if keys.pressed(KeyCode::KeyA) {
             input.roll += 1.0;
         }
+        if keys.pressed(KeyCode::KeyD) {
+            input.roll -= 1.0;
+        }
 
-        // Yaw: Q = yaw left (positive Y rotation), E = yaw right (negative)
+        // Yaw: Q = yaw left, E = yaw right
         if keys.pressed(KeyCode::KeyQ) {
-            input.yaw += 1.0;
+            input.yaw -= 1.0;
         }
         if keys.pressed(KeyCode::KeyE) {
-            input.yaw -= 1.0;
+            input.yaw += 1.0;
         }
 
         // Throttle: Shift = increase, Ctrl = decrease
