@@ -3,7 +3,9 @@ use bevy::prelude::*;
 pub mod atmosphere;
 pub mod flight_model;
 
-use crate::aircraft::{Aircraft, ControlInput, Propeller};
+use crate::aircraft::{
+    Aircraft, AileronLeft, AileronRight, ControlInput, Elevator, Propeller, Rudder,
+};
 use crate::state::GameState;
 use flight_model::{AERO_YAW_COEFF, Q_CRUISE, STALL_ANGLE};
 
@@ -37,6 +39,7 @@ impl Plugin for PhysicsPlugin {
                 aerodynamic_yaw.in_set(PhysicsSet::TransformSync),
                 update_aircraft_transform.in_set(PhysicsSet::TransformSync).after(aerodynamic_yaw),
                 spin_propeller.in_set(PhysicsSet::TransformSync),
+                animate_control_surfaces.in_set(PhysicsSet::TransformSync),
             ),
         );
     }
@@ -195,8 +198,52 @@ fn spin_propeller(
 ) {
     for (parent, mut transform) in prop_query.iter_mut() {
         if let Ok(aircraft) = aircraft_query.get(parent.get()) {
-            let spin_speed = aircraft.throttle * 30.0; // radians per second
+            let spin_speed = aircraft.throttle * 30.0;
             transform.rotate_local_z(spin_speed * time.delta_secs());
+        }
+    }
+}
+
+/// Animate control surfaces (ailerons, elevator, rudder) based on input.
+/// Max deflection ≈ 25° (0.44 rad). Surfaces lerp smoothly to target.
+const MAX_SURFACE_DEFLECTION: f32 = 0.44;
+const SURFACE_LERP_SPEED: f32 = 10.0;
+
+fn animate_control_surfaces(
+    time: Res<Time>,
+    aircraft_query: Query<&ControlInput>,
+    mut left_ail: Query<(&Parent, &mut Transform), (With<AileronLeft>, Without<AileronRight>, Without<Elevator>, Without<Rudder>)>,
+    mut right_ail: Query<(&Parent, &mut Transform), (With<AileronRight>, Without<AileronLeft>, Without<Elevator>, Without<Rudder>)>,
+    mut elevator: Query<(&Parent, &mut Transform), (With<Elevator>, Without<AileronLeft>, Without<AileronRight>, Without<Rudder>)>,
+    mut rudder: Query<(&Parent, &mut Transform, &Rudder), (Without<AileronLeft>, Without<AileronRight>, Without<Elevator>)>,
+) {
+    let dt = time.delta_secs();
+    let t = (SURFACE_LERP_SPEED * dt).min(1.0);
+
+    for (parent, mut tf) in left_ail.iter_mut() {
+        if let Ok(input) = aircraft_query.get(parent.get()) {
+            let target = Quat::from_rotation_x(-input.roll * MAX_SURFACE_DEFLECTION);
+            tf.rotation = tf.rotation.slerp(target, t);
+        }
+    }
+    for (parent, mut tf) in right_ail.iter_mut() {
+        if let Ok(input) = aircraft_query.get(parent.get()) {
+            let target = Quat::from_rotation_x(input.roll * MAX_SURFACE_DEFLECTION);
+            tf.rotation = tf.rotation.slerp(target, t);
+        }
+    }
+    for (parent, mut tf) in elevator.iter_mut() {
+        if let Ok(input) = aircraft_query.get(parent.get()) {
+            let target = Quat::from_rotation_x(input.pitch * MAX_SURFACE_DEFLECTION);
+            tf.rotation = tf.rotation.slerp(target, t);
+        }
+    }
+    // Rudder: compose deflection on top of base rotation (handles canted F-15 tails)
+    for (parent, mut tf, rudder_data) in rudder.iter_mut() {
+        if let Ok(input) = aircraft_query.get(parent.get()) {
+            let deflection = Quat::from_rotation_y(input.yaw * MAX_SURFACE_DEFLECTION);
+            let target = rudder_data.base_rotation * deflection;
+            tf.rotation = tf.rotation.slerp(target, t);
         }
     }
 }

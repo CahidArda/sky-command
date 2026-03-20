@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput};
+use super::{Aircraft, ControlInput, AileronLeft, AileronRight, Elevator, Rudder};
 
 /// F-15 Eagle specifications.
 pub fn default_aircraft() -> Aircraft {
@@ -651,6 +651,69 @@ pub fn spawn_aircraft(
                 Mesh3d(meshes.add(Cuboid::new(0.06, 0.50, 0.80))),
                 MeshMaterial3d(dark_grey_mat.clone()),
                 Transform::from_xyz(0.70, -1.00, 7.50),
+            ));
+
+            // ── CONTROL SURFACES ─────────────────────────────────────────
+            // Slightly darker than the wing surfaces for visibility.
+            let ctrl_surface_mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(0.55, 0.56, 0.57),
+                ..default()
+            });
+
+            // Left aileron — trailing edge of left outer wing
+            // Outer wing at X=-4.70, Y=-0.15, Z=wing_z+0.80=1.30, chord 2.20
+            // Trailing edge at Z=1.30+1.10=2.40
+            parent.spawn((
+                AileronLeft,
+                Mesh3d(meshes.add(Cuboid::new(1.5, 0.06, 0.5))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-4.70, wing_y, wing_z + 0.80 + 1.30),
+            ));
+
+            // Right aileron — trailing edge of right outer wing
+            parent.spawn((
+                AileronRight,
+                Mesh3d(meshes.add(Cuboid::new(1.5, 0.06, 0.5))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(4.70, wing_y, wing_z + 0.80 + 1.30),
+            ));
+
+            // Left elevator — trailing edge of left horizontal stabilizer
+            // Htail at X=-1.90, Y=0.10, Z=8.00, chord 2.00
+            // Trailing edge at Z=8.00+1.00=9.00
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(2.2, 0.05, 0.45))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-1.90, htail_y, htail_z + 1.20),
+            ));
+
+            // Right elevator — trailing edge of right horizontal stabilizer
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(2.2, 0.05, 0.45))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(1.90, htail_y, htail_z + 1.20),
+            ));
+
+            // Left rudder — trailing edge of left vertical stabilizer
+            let left_cant = Quat::from_rotation_z(vtail_cant);
+            parent.spawn((
+                Rudder { base_rotation: left_cant },
+                Mesh3d(meshes.add(Cuboid::new(0.06, 2.0, 0.5))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-1.30, 2.00, vtail_z + 1.60)
+                    .with_rotation(left_cant),
+            ));
+
+            // Right rudder — trailing edge of right vertical stabilizer
+            let right_cant = Quat::from_rotation_z(-vtail_cant);
+            parent.spawn((
+                Rudder { base_rotation: right_cant },
+                Mesh3d(meshes.add(Cuboid::new(0.06, 2.0, 0.5))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(1.30, 2.00, vtail_z + 1.60)
+                    .with_rotation(right_cant),
             ));
         });
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput};
+use super::{Aircraft, ControlInput, AileronLeft, AileronRight, Elevator};
 
 /// B-2 Spirit specifications.
 pub fn default_aircraft() -> Aircraft {
@@ -600,6 +600,51 @@ pub fn spawn_aircraft(
                 Mesh3d(meshes.add(Cuboid::new(2.5, 0.05, 5.0))),
                 MeshMaterial3d(stealth_mid.clone()),
                 Transform::from_xyz(1.8, -1.32, -1.0),
+            ));
+
+            // ── CONTROL SURFACES (elevons — no rudder on B-2) ────────────
+            // The B-2 has no vertical tail, so no rudder. Control is via
+            // elevons: ailerons on outer wings, elevators on inner wings.
+            // Slightly lighter than the stealth surfaces for visibility.
+            let ctrl_surface_mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(0.30, 0.30, 0.32),
+                ..default()
+            });
+
+            // Left aileron — trailing edge of left outer wing
+            // Outer wing at X=-20.0, Y=0.0, Z=0.5, chord 6.5
+            // Trailing edge at Z=0.5+3.25=3.75
+            parent.spawn((
+                AileronLeft,
+                Mesh3d(meshes.add(Cuboid::new(8.0, 0.07, 1.0))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-20.0, -0.05, 4.5),
+            ));
+
+            // Right aileron — trailing edge of right outer wing
+            parent.spawn((
+                AileronRight,
+                Mesh3d(meshes.add(Cuboid::new(8.0, 0.07, 1.0))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(20.0, -0.05, 4.5),
+            ));
+
+            // Left elevator — trailing edge of left inner wing
+            // Inner wing at X=-9.0, Y=0.0, Z=-1.0, chord 10.0
+            // Trailing edge at Z=-1.0+5.0=4.0
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(6.0, 0.08, 1.0))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-7.0, -0.05, 5.5),
+            ));
+
+            // Right elevator — trailing edge of right inner wing
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(6.0, 0.08, 1.0))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(7.0, -0.05, 5.5),
             ));
         });
 }

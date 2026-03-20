@@ -45,6 +45,25 @@ pub struct ControlInput {
 #[derive(Component)]
 pub struct Propeller;
 
+/// Marker for a left aileron (deflects opposite to right).
+#[derive(Component)]
+pub struct AileronLeft;
+
+/// Marker for a right aileron.
+#[derive(Component)]
+pub struct AileronRight;
+
+/// Marker for elevator surfaces.
+#[derive(Component)]
+pub struct Elevator;
+
+/// Marker for rudder surface. Stores the base (rest) rotation so
+/// animation can compose deflection on top without losing cant angle.
+#[derive(Component)]
+pub struct Rudder {
+    pub base_rotation: Quat,
+}
+
 /// Which type of aircraft is selected.
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub enum AircraftType {

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::f32::consts::PI;
 
-use super::{Aircraft, ControlInput};
+use super::{Aircraft, ControlInput, AileronLeft, AileronRight, Elevator, Rudder};
 
 /// Boeing 737-style airliner specifications.
 pub fn default_aircraft() -> Aircraft {
@@ -551,6 +551,59 @@ pub fn spawn_aircraft(
                 MeshMaterial3d(tire_mat.clone()),
                 Transform::from_xyz(2.20, -4.70, 0.10)
                     .with_rotation(Quat::from_rotation_z(PI / 2.0)),
+            ));
+
+            // ── CONTROL SURFACES ─────────────────────────────────────────
+            // Slightly darker than wing material so they're visible.
+            let ctrl_surface_mat = materials.add(StandardMaterial {
+                base_color: Color::srgb(0.78, 0.78, 0.80),
+                ..default()
+            });
+
+            // Left aileron — trailing edge of left outer wing panel
+            // Outer wing at X=-12.40, Y=-0.30, Z=wing_root_z+3.5=2.5, chord 3.0
+            // Trailing edge at Z=2.5+1.5=4.0
+            parent.spawn((
+                AileronLeft,
+                Mesh3d(meshes.add(Cuboid::new(5.0, 0.08, 0.8))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-12.40, wing_y + 0.30, wing_root_z + 5.0),
+            ));
+
+            // Right aileron — trailing edge of right outer wing panel
+            parent.spawn((
+                AileronRight,
+                Mesh3d(meshes.add(Cuboid::new(5.0, 0.08, 0.8))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(12.40, wing_y + 0.30, wing_root_z + 5.0),
+            ));
+
+            // Left elevator — trailing edge of left horizontal stabilizer
+            // Horizontal stab at X=-3.50, Y=1.20, Z=16.5, chord 3.0
+            // Trailing edge at Z=16.5+1.5=18.0
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(4.5, 0.07, 0.7))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(-3.50, 1.20, 18.0),
+            ));
+
+            // Right elevator — trailing edge of right horizontal stabilizer
+            parent.spawn((
+                Elevator,
+                Mesh3d(meshes.add(Cuboid::new(4.5, 0.07, 0.7))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(3.50, 1.20, 18.0),
+            ));
+
+            // Rudder — trailing edge of vertical stabilizer
+            // Vertical stab main fin at X=0, Y=3.80, Z=15.0, chord 4.50
+            // Trailing edge at Z=15.0+2.25=17.25
+            parent.spawn((
+                Rudder { base_rotation: Quat::IDENTITY },
+                Mesh3d(meshes.add(Cuboid::new(0.08, 4.0, 0.8))),
+                MeshMaterial3d(ctrl_surface_mat.clone()),
+                Transform::from_xyz(0.0, 3.80, 17.30),
             ));
         });
 }
