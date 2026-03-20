@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 pub mod airliner;
-pub mod bomber;
 pub mod fighter;
 pub mod prop;
 
@@ -71,7 +70,6 @@ pub enum AircraftType {
     Prop,
     Airliner,
     Fighter,
-    Bomber,
 }
 
 impl AircraftType {
@@ -80,7 +78,6 @@ impl AircraftType {
             Self::Prop => "Cessna 172",
             Self::Airliner => "Boeing 737",
             Self::Fighter => "F-15 Eagle",
-            Self::Bomber => "B-2 Spirit",
         }
     }
 
@@ -89,18 +86,16 @@ impl AircraftType {
             Self::Prop => "Single-engine prop plane. Easy to fly.",
             Self::Airliner => "Twin-engine airliner. Stable but sluggish.",
             Self::Fighter => "Air superiority fighter. Fast and agile.",
-            Self::Bomber => "Stealth flying wing. Heavy precision bomber.",
         }
     }
 
     pub fn has_weapons(&self) -> bool {
-        matches!(self, Self::Fighter | Self::Bomber)
+        matches!(self, Self::Fighter)
     }
 
     pub fn weapons_list(&self) -> &'static str {
         match self {
             Self::Fighter => "AIM-9  AGM-65",
-            Self::Bomber => "GBU-31  JDAM",
             _ => "",
         }
     }
@@ -130,6 +125,5 @@ fn spawn_selected_aircraft(
         AircraftType::Prop => prop::spawn_aircraft(commands, meshes, materials),
         AircraftType::Airliner => airliner::spawn_aircraft(commands, meshes, materials),
         AircraftType::Fighter => fighter::spawn_aircraft(commands, meshes, materials),
-        AircraftType::Bomber => bomber::spawn_aircraft(commands, meshes, materials),
     }
 }

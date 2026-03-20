@@ -8,6 +8,7 @@ packages/web/out/
 packages/wasm/target/
 packages/wasm/pkg/
 packages/wasm/web/pkg
+packages/wasm/web/assets
 packages/wasm/web/dist/
 
 # IDE

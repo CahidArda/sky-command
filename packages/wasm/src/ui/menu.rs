@@ -17,7 +17,6 @@ pub fn spawn_menu(mut commands: Commands) {
         AircraftType::Prop,
         AircraftType::Airliner,
         AircraftType::Fighter,
-        AircraftType::Bomber,
     ];
 
     commands
