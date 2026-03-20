@@ -29,7 +29,7 @@ fn spawn_engine_sound(
     let path = match selected.0 {
         AircraftType::Prop => "audio/engine_prop.wav",
         AircraftType::Airliner => "audio/engine_jet.wav",
-        AircraftType::Fighter => "audio/engine_fighter.wav",
+        AircraftType::Fighter => "audio/engine_jet.wav",
     };
 
     let handle: Handle<AudioSource> = asset_server.load(path);
