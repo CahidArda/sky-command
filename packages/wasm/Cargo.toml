@@ -14,7 +14,8 @@ bevy = { version = "0.15", default-features = false, features = [
     "bevy_winit",
     "bevy_state",
     "default_font",
-    "x11",
+    "tonemapping_luts",
+    "webgl2",
 ] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

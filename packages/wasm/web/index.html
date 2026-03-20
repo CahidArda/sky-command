@@ -18,8 +18,14 @@
         async function run() {
             try {
                 await init();
-                document.getElementById('loading').style.display = 'none';
             } catch (error) {
+                // winit on WASM uses a thrown exception for control flow
+                // ("Using exceptions for control flow, don't mind me")
+                // — this is normal and means the app is running.
+                if (error && error.message && error.message.includes("don't mind me")) {
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
                 const loading = document.getElementById('loading');
                 loading.innerHTML = '<p class="error">Failed to load SkyCommand: ' + error.message + '</p>';
                 console.error('Failed to initialize WASM:', error);
