@@ -1,0 +1,20 @@
+{
+  "id": "fighter",
+  "name": "F-15 Eagle",
+  "description": "A twin-engine air superiority fighter. Extremely fast and agile with missile and bomb capability.",
+  "maxSpeed": 1450,
+  "ceiling": 65000,
+  "climbRate": 50000,
+  "agility": "very_high",
+  "weapons": ["AIM-9", "AGM-65"],
+  "wingArea": 56.5,
+  "mass": 20000,
+  "maxThrust": 210000,
+  "cd0": 0.022,
+  "oswaldEfficiency": 0.85,
+  "aspectRatio": 3.01,
+  "pitchRate": 90,
+  "rollRate": 240,
+  "yawRate": 45,
+  "missions": ["ferry", "intercept", "naval_strike"]
+}

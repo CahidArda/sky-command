@@ -3,7 +3,7 @@ use bevy::prelude::*;
 /// Spawn the version display in the bottom-right corner.
 pub fn spawn_version_display(mut commands: Commands) {
     commands.spawn((
-        Text::new("SkyCommand v0.1.0 (wasm)"),
+        Text::new("SkyCommand v0.2.0 (wasm)"),
         TextFont {
             font_size: 16.0,
             ..default()

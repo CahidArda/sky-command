@@ -1,0 +1,20 @@
+{
+  "id": "bomber",
+  "name": "B-2 Spirit",
+  "description": "A stealth flying-wing heavy bomber. Slow to maneuver but carries precision-guided munitions.",
+  "maxSpeed": 560,
+  "ceiling": 50000,
+  "climbRate": 5000,
+  "agility": "low",
+  "weapons": ["GBU-31", "JDAM"],
+  "wingArea": 478.0,
+  "mass": 71000,
+  "maxThrust": 308000,
+  "cd0": 0.018,
+  "oswaldEfficiency": 0.90,
+  "aspectRatio": 5.92,
+  "pitchRate": 25,
+  "rollRate": 35,
+  "yawRate": 15,
+  "missions": ["ferry", "naval_strike", "facility"]
+}

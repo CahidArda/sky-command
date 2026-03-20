@@ -1,0 +1,20 @@
+{
+  "id": "airliner",
+  "name": "Boeing 737-800",
+  "description": "A twin-engine narrow-body airliner. Sluggish but stable, designed for ferry missions.",
+  "maxSpeed": 490,
+  "ceiling": 41000,
+  "climbRate": 3000,
+  "agility": "low",
+  "weapons": [],
+  "wingArea": 124.6,
+  "mass": 62000,
+  "maxThrust": 240000,
+  "cd0": 0.020,
+  "oswaldEfficiency": 0.78,
+  "aspectRatio": 9.45,
+  "pitchRate": 20,
+  "rollRate": 30,
+  "yawRate": 15,
+  "missions": ["ferry"]
+}

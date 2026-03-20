@@ -4,11 +4,11 @@ pub mod atmosphere;
 pub mod flight_model;
 
 use crate::aircraft::{Aircraft, ControlInput, Propeller};
+use crate::state::GameState;
 use flight_model::{AERO_YAW_COEFF, Q_CRUISE};
 
 pub struct PhysicsPlugin;
 
-/// System sets for ordering physics systems.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PhysicsSet {
     Forces,
@@ -25,7 +25,8 @@ impl Plugin for PhysicsPlugin {
                 PhysicsSet::Integration,
                 PhysicsSet::TransformSync,
             )
-                .chain(),
+                .chain()
+                .run_if(in_state(GameState::Flying)),
         )
         .add_systems(
             Update,

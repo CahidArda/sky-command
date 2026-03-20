@@ -2,9 +2,10 @@ use bevy::prelude::*;
 
 pub mod keyboard;
 
+use crate::state::GameState;
+
 pub struct InputPlugin;
 
-/// System set for input handling — runs before physics.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct InputSet;
 
@@ -14,6 +15,11 @@ impl Plugin for InputPlugin {
             Update,
             InputSet.before(crate::physics::PhysicsSet::Forces),
         )
-        .add_systems(Update, keyboard::handle_keyboard_input.in_set(InputSet));
+        .add_systems(
+            Update,
+            keyboard::handle_keyboard_input
+                .in_set(InputSet)
+                .run_if(in_state(GameState::Flying)),
+        );
     }
 }

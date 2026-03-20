@@ -4,8 +4,11 @@ mod aircraft;
 mod camera;
 mod input;
 mod physics;
+mod state;
 mod ui;
 mod world;
+
+use state::GameState;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -20,7 +23,7 @@ pub fn run() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "SkyCommand v0.1.0".into(),
+                title: "SkyCommand v0.2.0".into(),
                 canvas: Some("#skycommand-canvas".into()),
                 fit_canvas_to_parent: true,
                 prevent_default_event_handling: true,
@@ -28,6 +31,7 @@ pub fn run() {
             }),
             ..default()
         }))
+        .init_state::<GameState>()
         .add_plugins((
             world::WorldPlugin,
             aircraft::AircraftPlugin,
