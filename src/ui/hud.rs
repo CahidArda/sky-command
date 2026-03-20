@@ -3,6 +3,10 @@ use bevy::prelude::*;
 use crate::aircraft::{Aircraft, SelectedAircraft};
 use crate::physics::flight_model::STALL_ANGLE;
 
+/// Marker on all UI entities spawned during Flying state (for cleanup on exit).
+#[derive(Component)]
+pub struct FlyingUi;
+
 #[derive(Component)]
 pub struct HudSpeed;
 #[derive(Component)]
@@ -43,24 +47,28 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Aircraft name — centered at top
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(15.0),
-            width: Val::Percent(100.0),
-            justify_content: JustifyContent::Center,
-            ..default()
-        })
+        .spawn((
+            FlyingUi,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(15.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+        ))
         .with_children(|parent| {
             parent.spawn((
                 HudAircraftName,
                 Text::new(selected.0.name()),
                 small_font.clone(),
-                TextColor(Color::srgb(0.0, 0.8, 0.3)),
+                hud_color,
             ));
         });
 
     // Speed
     commands.spawn((
+        FlyingUi,
         HudSpeed,
         Text::new("SPD: 0 kts"),
         hud_font.clone(),
@@ -75,6 +83,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Altitude
     commands.spawn((
+        FlyingUi,
         HudAltitude,
         Text::new("ALT: 0 ft"),
         hud_font.clone(),
@@ -89,6 +98,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Heading
     commands.spawn((
+        FlyingUi,
         HudHeading,
         Text::new("HDG: 000deg"),
         hud_font.clone(),
@@ -103,6 +113,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Pitch
     commands.spawn((
+        FlyingUi,
         HudPitch,
         Text::new("PIT: 0.0deg"),
         hud_font.clone(),
@@ -117,6 +128,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Throttle
     commands.spawn((
+        FlyingUi,
         HudThrottle,
         Text::new("THR: 0%"),
         hud_font.clone(),
@@ -131,6 +143,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Angle of Attack
     commands.spawn((
+        FlyingUi,
         HudAoA,
         Text::new("AoA: 0.0deg"),
         hud_font.clone(),
@@ -145,6 +158,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Vertical speed / sink rate — always shown
     commands.spawn((
+        FlyingUi,
         HudVSpeed,
         Text::new("V/S: 0 fpm"),
         hud_font.clone(),
@@ -159,6 +173,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // G-load
     commands.spawn((
+        FlyingUi,
         HudGLoad,
         Text::new("G: 1.0"),
         hud_font,
@@ -173,13 +188,16 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
     // Stall warning — centered in a full-width container
     commands
-        .spawn(Node {
-            position_type: PositionType::Absolute,
-            top: Val::Px(50.0),
-            width: Val::Percent(100.0),
-            justify_content: JustifyContent::Center,
-            ..default()
-        })
+        .spawn((
+            FlyingUi,
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(50.0),
+                width: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+        ))
         .with_children(|parent| {
             parent.spawn((
                 HudStallWarning,
@@ -195,6 +213,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
     // Weapons display — only for combat aircraft (below AoA)
     if selected.0.has_weapons() {
         commands.spawn((
+            FlyingUi,
             HudWeapons,
             Text::new(format!("WPN: {}", selected.0.weapons_list())),
             small_font,

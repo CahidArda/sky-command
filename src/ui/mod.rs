@@ -33,6 +33,14 @@ impl Plugin for UiPlugin {
                 hud::update_hud
                     .in_set(UiSet)
                     .run_if(in_state(GameState::Flying)),
-            );
+            )
+            .add_systems(OnExit(GameState::Flying), despawn_flying_ui);
+    }
+}
+
+/// Despawn all UI entities marked with FlyingUi when leaving Flying state.
+fn despawn_flying_ui(mut commands: Commands, query: Query<Entity, With<hud::FlyingUi>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
     }
 }

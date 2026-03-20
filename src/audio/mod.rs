@@ -16,7 +16,8 @@ impl Plugin for AudioPlugin {
             .add_systems(
                 Update,
                 update_engine_sound.run_if(in_state(GameState::Flying)),
-            );
+            )
+            .add_systems(OnExit(GameState::Flying), despawn_engine_sound);
     }
 }
 
@@ -62,4 +63,11 @@ fn update_engine_sound(
 
     sink.set_speed(0.7 + throttle * 0.8 + (speed_factor - 0.5) * 0.3);
     sink.set_volume(0.15 + throttle * 0.35);
+}
+
+/// Despawn engine sound when leaving Flying state.
+fn despawn_engine_sound(mut commands: Commands, query: Query<Entity, With<EngineSound>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
 }

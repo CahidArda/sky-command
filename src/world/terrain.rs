@@ -254,3 +254,15 @@ fn spawn_chunk(
             }
         });
 }
+
+/// Despawn all terrain chunks when leaving Flying state.
+pub fn cleanup_terrain(
+    mut commands: Commands,
+    query: Query<Entity, With<TerrainChunk>>,
+    mut loaded: ResMut<LoadedChunks>,
+) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
+    }
+    loaded.chunks.clear();
+}

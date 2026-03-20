@@ -103,7 +103,9 @@ pub fn spawn_menu(mut commands: Commands) {
 
             // Controls hint
             root.spawn((
-                Text::new("W/S Pitch · A/D Roll · Q/E Yaw · Shift/Ctrl Throttle · C Camera"),
+                Text::new(
+                    "W/S Pitch · A/D Roll · Q/E Yaw · Shift/Ctrl Throttle · C Camera · ESC Menu",
+                ),
                 TextFont {
                     font_size: 13.0,
                     ..default()

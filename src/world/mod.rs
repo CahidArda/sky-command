@@ -14,6 +14,7 @@ impl Plugin for WorldPlugin {
             .add_systems(
                 Update,
                 terrain::update_terrain.run_if(in_state(GameState::Flying)),
-            );
+            )
+            .add_systems(OnExit(GameState::Flying), terrain::cleanup_terrain);
     }
 }

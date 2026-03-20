@@ -110,7 +110,8 @@ pub struct AircraftPlugin;
 impl Plugin for AircraftPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SelectedAircraft>()
-            .add_systems(OnEnter(GameState::Flying), spawn_selected_aircraft);
+            .add_systems(OnEnter(GameState::Flying), spawn_selected_aircraft)
+            .add_systems(OnExit(GameState::Flying), despawn_aircraft);
     }
 }
 
@@ -125,5 +126,12 @@ fn spawn_selected_aircraft(
         AircraftType::Prop => prop::spawn_aircraft(commands, meshes, materials),
         AircraftType::Airliner => airliner::spawn_aircraft(commands, meshes, materials),
         AircraftType::Fighter => fighter::spawn_aircraft(commands, meshes, materials),
+    }
+}
+
+/// Despawn all aircraft entities when leaving Flying state.
+fn despawn_aircraft(mut commands: Commands, query: Query<Entity, With<Aircraft>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn_recursive();
     }
 }
