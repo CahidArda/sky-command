@@ -90,6 +90,7 @@ cargo install wasm-pack
 
 # dev build + serve
 wasm-pack build --dev --target web
+ln -sf ../pkg web/pkg   # symlink build output into serve root
 npx serve web/
 
 # check / test
