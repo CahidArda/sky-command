@@ -8,11 +8,9 @@ use crate::aircraft::Aircraft;
 const CL_MAX: f32 = 1.5;
 
 /// Stall angle in radians (~15 degrees).
-const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
+pub const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
 
-/// Lateral sideslip force coefficient per radian of β.
-/// Pushes velocity toward the nose. Moderate so it barely opposes banked turns.
-const SIDE_FORCE_COEFF: f32 = 0.5;
+// Side force coefficient is now per-aircraft (aircraft.side_force_coeff).
 
 /// Aerodynamic yaw rate coefficient (rad/s per radian of heading error at cruise q).
 /// The vertical tail rotates the nose toward the velocity direction.
@@ -153,7 +151,7 @@ pub fn update_flight_physics(
             let vel_normalized = aircraft.velocity.normalize();
             let dot_right = vel_normalized.dot(right);
             let beta = dot_right.clamp(-1.0, 1.0).asin();
-            let side_force_mag = q * aircraft.wing_area * SIDE_FORCE_COEFF * beta;
+            let side_force_mag = q * aircraft.wing_area * aircraft.side_force_coeff * beta;
             let side_raw = right - vel_normalized * dot_right;
             let side_len = side_raw.length();
             if side_len > 0.001 {
@@ -173,6 +171,9 @@ pub fn update_flight_physics(
 
         // ---- ACCELERATION AND INTEGRATION ----
         let acceleration = total_force / aircraft.mass;
+        // G-load: aerodynamic + thrust acceleration (exclude gravity) / g
+        let aero_accel = (lift_force + drag_force + thrust_force + side_force) / aircraft.mass;
+        aircraft.g_load = aero_accel.length() / G;
         aircraft.velocity += acceleration * dt;
 
         // Clamp velocity to prevent numerical instability

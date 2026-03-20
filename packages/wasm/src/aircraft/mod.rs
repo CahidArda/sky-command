@@ -22,8 +22,14 @@ pub struct Aircraft {
     pub pitch_rate: f32,
     pub roll_rate: f32,
     pub yaw_rate: f32,
+    /// Lateral sideslip force coefficient — how strongly rudder/sideslip
+    /// pushes the velocity. High for aircraft with large vertical tails,
+    /// near zero for flying wings like the B-2.
+    pub side_force_coeff: f32,
     /// Current angle of attack (radians), updated by flight model each frame.
     pub alpha: f32,
+    /// Current G-load, updated by flight model each frame.
+    pub g_load: f32,
 }
 
 /// Control input component attached to the aircraft.

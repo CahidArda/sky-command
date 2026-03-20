@@ -18,7 +18,9 @@ pub fn default_aircraft() -> Aircraft {
         pitch_rate: 90.0_f32.to_radians(),
         roll_rate: 240.0_f32.to_radians(),
         yaw_rate: 45.0_f32.to_radians(),
-        alpha: 0.0,    }
+        side_force_coeff: 3.0,
+        alpha: 0.0,
+        g_load: 1.0,    }
 }
 
 /// Spawn an F-15 Eagle at altitude 1000 m heading north.

@@ -18,7 +18,9 @@ pub fn default_aircraft() -> Aircraft {
         pitch_rate: 60.0_f32.to_radians(),
         roll_rate: 90.0_f32.to_radians(),
         yaw_rate: 30.0_f32.to_radians(),
-        alpha: 0.0,    }
+        side_force_coeff: 2.0,
+        alpha: 0.0,
+        g_load: 1.0,    }
 }
 
 /// Spawn the prop plane aircraft at altitude 1000m heading north.

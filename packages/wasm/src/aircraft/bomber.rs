@@ -18,7 +18,9 @@ pub fn default_aircraft() -> Aircraft {
         pitch_rate: 25.0_f32.to_radians(),
         roll_rate: 35.0_f32.to_radians(),
         yaw_rate: 15.0_f32.to_radians(),
-        alpha: 0.0,    }
+        side_force_coeff: 0.3,
+        alpha: 0.0,
+        g_load: 1.0,    }
 }
 
 /// Spawn the B-2 Spirit stealth bomber at altitude 1000 m heading north.

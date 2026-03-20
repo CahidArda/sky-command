@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::aircraft::{Aircraft, SelectedAircraft};
+use crate::physics::flight_model::STALL_ANGLE;
 
 #[derive(Component)]
 pub struct HudSpeed;
@@ -14,6 +15,12 @@ pub struct HudPitch;
 pub struct HudThrottle;
 #[derive(Component)]
 pub struct HudAoA;
+#[derive(Component)]
+pub struct HudVSpeed;
+#[derive(Component)]
+pub struct HudGLoad;
+#[derive(Component)]
+pub struct HudStallWarning;
 #[derive(Component)]
 pub struct HudWeapons;
 #[derive(Component)]
@@ -34,19 +41,23 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
         ..default()
     };
 
-    // Aircraft name — top center
-    commands.spawn((
-        HudAircraftName,
-        Text::new(selected.0.name()),
-        small_font.clone(),
-        TextColor(Color::srgb(0.0, 0.8, 0.3)),
-        Node {
+    // Aircraft name — centered at top
+    commands
+        .spawn(Node {
             position_type: PositionType::Absolute,
             top: Val::Px(15.0),
-            left: Val::Percent(50.0),
+            width: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
             ..default()
-        },
-    ));
+        })
+        .with_children(|parent| {
+            parent.spawn((
+                HudAircraftName,
+                Text::new(selected.0.name()),
+                small_font.clone(),
+                TextColor(Color::srgb(0.0, 0.8, 0.3)),
+            ));
+        });
 
     // Speed
     commands.spawn((
@@ -79,7 +90,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
     // Heading
     commands.spawn((
         HudHeading,
-        Text::new("HDG: 000\u{00B0}"),
+        Text::new("HDG: 000deg"),
         hud_font.clone(),
         hud_color,
         Node {
@@ -93,7 +104,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
     // Pitch
     commands.spawn((
         HudPitch,
-        Text::new("PIT: 0.0\u{00B0}"),
+        Text::new("PIT: 0.0deg"),
         hud_font.clone(),
         hud_color,
         Node {
@@ -121,8 +132,8 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
     // Angle of Attack
     commands.spawn((
         HudAoA,
-        Text::new("AoA: 0.0\u{00B0}"),
-        hud_font,
+        Text::new("AoA: 0.0deg"),
+        hud_font.clone(),
         hud_color,
         Node {
             position_type: PositionType::Absolute,
@@ -131,6 +142,55 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
             ..default()
         },
     ));
+
+    // Vertical speed / sink rate — always shown
+    commands.spawn((
+        HudVSpeed,
+        Text::new("V/S: 0 fpm"),
+        hud_font.clone(),
+        hud_color,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(195.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
+    ));
+
+    // G-load
+    commands.spawn((
+        HudGLoad,
+        Text::new("G: 1.0"),
+        hud_font,
+        hud_color,
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(225.0),
+            left: Val::Px(15.0),
+            ..default()
+        },
+    ));
+
+    // Stall warning — centered in a full-width container
+    commands
+        .spawn(Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(50.0),
+            width: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn((
+                HudStallWarning,
+                Text::new(""),
+                TextFont {
+                    font_size: 40.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(1.0, 0.2, 0.1)),
+            ));
+        });
 
     // Weapons display — only for combat aircraft (below AoA)
     if selected.0.has_weapons() {
@@ -141,7 +201,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
             TextColor(Color::srgb(1.0, 0.6, 0.0)),
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(200.0),
+                top: Val::Px(260.0),
                 left: Val::Px(15.0),
                 ..default()
             },
@@ -151,13 +211,9 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 
 /// Update HUD text from aircraft state.
 pub fn update_hud(
+    time: Res<Time>,
     aircraft_query: Query<(&Aircraft, &Transform)>,
-    mut speed_q: Query<&mut Text, (With<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
-    mut alt_q: Query<&mut Text, (With<HudAltitude>, Without<HudSpeed>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
-    mut hdg_q: Query<&mut Text, (With<HudHeading>, Without<HudSpeed>, Without<HudAltitude>, Without<HudPitch>, Without<HudThrottle>, Without<HudAoA>)>,
-    mut pit_q: Query<&mut Text, (With<HudPitch>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudThrottle>, Without<HudAoA>)>,
-    mut thr_q: Query<&mut Text, (With<HudThrottle>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudAoA>)>,
-    mut aoa_q: Query<&mut Text, (With<HudAoA>, Without<HudSpeed>, Without<HudAltitude>, Without<HudHeading>, Without<HudPitch>, Without<HudThrottle>)>,
+    mut text_query: Query<(&mut Text, Option<&HudSpeed>, Option<&HudAltitude>, Option<&HudHeading>, Option<&HudPitch>, Option<&HudThrottle>, Option<&HudAoA>, Option<&HudVSpeed>, Option<&HudGLoad>, Option<&HudStallWarning>)>,
 ) {
     let Ok((aircraft, transform)) = aircraft_query.get_single() else {
         return;
@@ -174,11 +230,29 @@ pub fn update_hud(
     let pitch_deg = forward.y.asin().to_degrees();
     let throttle_pct = aircraft.throttle * 100.0;
     let aoa_deg = aircraft.alpha.to_degrees();
+    // Vertical speed: velocity Y component in feet per minute
+    let vspeed_fpm = aircraft.velocity.y * M_TO_FEET * 60.0;
+    let stalling = aircraft.alpha.abs() > STALL_ANGLE;
+    // Blink the stall warning using time
+    let show_stall = stalling && (time.elapsed_secs() * 4.0) as u32 % 2 == 0;
 
-    for mut t in speed_q.iter_mut() { **t = format!("SPD: {:.0} kts", speed_knots); }
-    for mut t in alt_q.iter_mut() { **t = format!("ALT: {:.0} ft", altitude_feet); }
-    for mut t in hdg_q.iter_mut() { **t = format!("HDG: {:03.0}\u{00B0}", heading_deg); }
-    for mut t in pit_q.iter_mut() { **t = format!("PIT: {:.1}\u{00B0}", pitch_deg); }
-    for mut t in thr_q.iter_mut() { **t = format!("THR: {:.0}%", throttle_pct); }
-    for mut t in aoa_q.iter_mut() { **t = format!("AoA: {:.1}\u{00B0}", aoa_deg); }
+    let g_load = aircraft.g_load;
+
+    for (mut text, spd, alt, hdg, pit, thr, aoa, vs, gload, stall) in text_query.iter_mut() {
+        if spd.is_some() { **text = format!("SPD: {:.0} kts", speed_knots); }
+        if alt.is_some() { **text = format!("ALT: {:.0} ft", altitude_feet); }
+        if hdg.is_some() { **text = format!("HDG: {:03.0}deg", heading_deg); }
+        if pit.is_some() { **text = format!("PIT: {:.1}deg", pitch_deg); }
+        if thr.is_some() { **text = format!("THR: {:.0}%", throttle_pct); }
+        if aoa.is_some() { **text = format!("AoA: {:.1}deg", aoa_deg); }
+        if vs.is_some() {
+            **text = format!("V/S: {:.0} fpm", vspeed_fpm);
+        }
+        if gload.is_some() {
+            **text = format!("G: {:.1}", g_load);
+        }
+        if stall.is_some() {
+            **text = if show_stall { "STALL".to_string() } else { String::new() };
+        }
+    }
 }

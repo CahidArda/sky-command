@@ -5,7 +5,7 @@ pub mod flight_model;
 
 use crate::aircraft::{Aircraft, ControlInput, Propeller};
 use crate::state::GameState;
-use flight_model::{AERO_YAW_COEFF, Q_CRUISE};
+use flight_model::{AERO_YAW_COEFF, Q_CRUISE, STALL_ANGLE};
 
 pub struct PhysicsPlugin;
 
@@ -147,8 +147,18 @@ fn aerodynamic_yaw(
         // Bank factor: mostly active when banked, weak when level.
         let bank_factor = ((1.0 - up.y * up.y).max(0.0).sqrt()).max(0.1);
 
+        // At high AoA (> stall), the vertical tail is also stalled and
+        // loses effectiveness. Scale aero yaw down to prevent violent spin.
+        let alpha_abs = aircraft.alpha.abs();
+        let stall_fade = if alpha_abs > STALL_ANGLE {
+            (1.0 - ((alpha_abs - STALL_ANGLE) / (1.0 - STALL_ANGLE)).min(1.0)).max(0.05)
+        } else {
+            1.0
+        };
+
         let q_scale = q / Q_CRUISE;
-        let yaw_rate = heading_error * AERO_YAW_COEFF * q_scale * bank_factor;
+        let yaw_rate = (heading_error * AERO_YAW_COEFF * q_scale * bank_factor * stall_fade)
+            .clamp(-2.0, 2.0); // max 2 rad/s ≈ 115°/s to prevent violent spin
 
         // Rotate around the aircraft's LOCAL up axis
         let yaw_rot = Quat::from_axis_angle(up, yaw_rate * dt);

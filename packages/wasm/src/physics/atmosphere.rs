@@ -42,6 +42,7 @@ pub fn density(altitude: f32) -> f32 {
 
 /// Compute air pressure at a given altitude (meters).
 /// P = P_0 * (T / T_0) ^ (g / (L * R))
+#[allow(dead_code)]
 pub fn pressure(altitude: f32) -> f32 {
     let alt = altitude.max(0.0).min(11000.0);
     let temp = temperature(alt);
