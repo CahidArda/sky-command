@@ -1,10 +1,10 @@
-/// ISA (International Standard Atmosphere) model.
-///
-/// Reference values:
-/// - Sea level density: 1.225 kg/m^3
-/// - Sea level temperature: 288.15 K
-/// - Temperature lapse rate: 0.0065 K/m
-/// - Gravitational acceleration: 9.80665 m/s^2
+//! ISA (International Standard Atmosphere) model.
+//!
+//! Reference values:
+//! - Sea level density: 1.225 kg/m^3
+//! - Sea level temperature: 288.15 K
+//! - Temperature lapse rate: 0.0065 K/m
+//! - Gravitational acceleration: 9.80665 m/s^2
 
 /// Sea level air density in kg/m^3.
 pub const RHO_SEA_LEVEL: f32 = 1.225;
@@ -24,7 +24,7 @@ pub const R_AIR: f32 = 287.05;
 /// Compute air temperature at a given altitude (meters).
 /// Uses the tropospheric lapse rate model up to 11,000m.
 pub fn temperature(altitude: f32) -> f32 {
-    let alt = altitude.max(0.0).min(11000.0);
+    let alt = altitude.clamp(0.0, 11000.0);
     T_SEA_LEVEL - LAPSE_RATE * alt
 }
 
@@ -33,7 +33,7 @@ pub fn temperature(altitude: f32) -> f32 {
 ///
 /// rho = rho_0 * (T / T_0) ^ (g / (L * R) - 1)
 pub fn density(altitude: f32) -> f32 {
-    let alt = altitude.max(0.0).min(11000.0);
+    let alt = altitude.clamp(0.0, 11000.0);
     let temp = temperature(alt);
     let temp_ratio = temp / T_SEA_LEVEL;
     let exponent = (G / (LAPSE_RATE * R_AIR)) - 1.0;
@@ -44,7 +44,7 @@ pub fn density(altitude: f32) -> f32 {
 /// P = P_0 * (T / T_0) ^ (g / (L * R))
 #[allow(dead_code)]
 pub fn pressure(altitude: f32) -> f32 {
-    let alt = altitude.max(0.0).min(11000.0);
+    let alt = altitude.clamp(0.0, 11000.0);
     let temp = temperature(alt);
     let temp_ratio = temp / T_SEA_LEVEL;
     let exponent = G / (LAPSE_RATE * R_AIR);

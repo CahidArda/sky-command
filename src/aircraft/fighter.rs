@@ -55,7 +55,7 @@ pub fn spawn_aircraft(
         base_color: Color::srgb(0.35, 0.36, 0.37),
         ..default()
     });
-    let very_dark = materials.add(StandardMaterial {
+    let _very_dark = materials.add(StandardMaterial {
         base_color: Color::srgb(0.18, 0.18, 0.20),
         ..default()
     });

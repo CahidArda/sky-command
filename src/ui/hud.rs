@@ -210,6 +210,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 }
 
 /// Update HUD text from aircraft state.
+#[allow(clippy::type_complexity)]
 pub fn update_hud(
     time: Res<Time>,
     aircraft_query: Query<(&Aircraft, &Transform)>,
@@ -245,7 +246,7 @@ pub fn update_hud(
     let vspeed_fpm = aircraft.velocity.y * M_TO_FEET * 60.0;
     let stalling = aircraft.alpha.abs() > STALL_ANGLE;
     // Blink the stall warning using time
-    let show_stall = stalling && (time.elapsed_secs() * 4.0) as u32 % 2 == 0;
+    let show_stall = stalling && ((time.elapsed_secs() * 4.0) as u32).is_multiple_of(2);
 
     let g_load = aircraft.g_load;
 

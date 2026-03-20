@@ -132,6 +132,7 @@ pub fn spawn_menu(mut commands: Commands) {
 }
 
 /// Handle button clicks — select aircraft and transition to Flying.
+#[allow(clippy::type_complexity)]
 pub fn handle_menu_buttons(
     interaction_query: Query<(&Interaction, &AircraftButton), (Changed<Interaction>, With<Button>)>,
     mut selected: ResMut<SelectedAircraft>,
@@ -146,6 +147,7 @@ pub fn handle_menu_buttons(
 }
 
 /// Update button colors on hover.
+#[allow(clippy::type_complexity)]
 pub fn update_button_colors(
     mut query: Query<
         (&Interaction, &mut BackgroundColor),

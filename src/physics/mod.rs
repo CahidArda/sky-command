@@ -93,7 +93,7 @@ fn update_angular_velocity(
         let yaw_rot = Quat::from_axis_angle(Vec3::Y, aircraft.angular_velocity.y * dt);
         let roll_rot = Quat::from_axis_angle(Vec3::Z, aircraft.angular_velocity.z * dt);
 
-        transform.rotation = transform.rotation * (yaw_rot * pitch_rot * roll_rot);
+        transform.rotation *= yaw_rot * pitch_rot * roll_rot;
         transform.rotation = transform.rotation.normalize();
     }
 }
@@ -202,6 +202,7 @@ fn spin_propeller(
 const MAX_SURFACE_DEFLECTION: f32 = 0.44;
 const SURFACE_LERP_SPEED: f32 = 10.0;
 
+#[allow(clippy::type_complexity)]
 fn animate_control_surfaces(
     time: Res<Time>,
     aircraft_query: Query<&ControlInput>,
