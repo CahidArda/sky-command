@@ -39,10 +39,10 @@ pub fn handle_keyboard_input(
 
         // Yaw: Q = yaw left, E = yaw right
         if keys.pressed(KeyCode::KeyQ) {
-            input.yaw -= 1.0;
+            input.yaw += 1.0;
         }
         if keys.pressed(KeyCode::KeyE) {
-            input.yaw += 1.0;
+            input.yaw -= 1.0;
         }
 
         // Throttle: Shift = increase, Ctrl = decrease

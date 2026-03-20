@@ -81,8 +81,8 @@ export default function Terrain() {
 function Runway() {
   return (
     <group>
-      {/* Runway surface */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} receiveShadow>
+      {/* Runway surface — raised above ground to prevent z-fighting */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.15, 0]} receiveShadow>
         <planeGeometry args={[30, 800]} />
         <meshStandardMaterial color="#444444" roughness={0.8} />
       </mesh>
@@ -92,7 +92,7 @@ function Runway() {
         <mesh
           key={`cl-${i}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0.03, -380 + i * 40]}
+          position={[0, 0.16, -380 + i * 40]}
           receiveShadow
         >
           <planeGeometry args={[0.5, 15]} />
@@ -106,7 +106,7 @@ function Runway() {
           <mesh
             key={`th-${z}-${x}`}
             rotation={[-Math.PI / 2, 0, 0]}
-            position={[x, 0.03, z]}
+            position={[x, 0.17, z]}
             receiveShadow
           >
             <planeGeometry args={[1.5, 20]} />

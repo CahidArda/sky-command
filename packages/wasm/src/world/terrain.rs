@@ -52,7 +52,7 @@ pub fn spawn_terrain(
     commands.spawn((
         Mesh3d(meshes.add(Plane3d::default().mesh().size(30.0, 800.0))),
         MeshMaterial3d(runway_mat),
-        Transform::from_xyz(0.0, 0.02, 0.0),
+        Transform::from_xyz(0.0, 0.15, 0.0),
     ));
 
     // Center line dashes
@@ -65,7 +65,7 @@ pub fn spawn_terrain(
         commands.spawn((
             Mesh3d(dash_mesh.clone()),
             MeshMaterial3d(white_mat.clone()),
-            Transform::from_xyz(0.0, 0.03, -380.0 + i as f32 * 40.0),
+            Transform::from_xyz(0.0, 0.16, -380.0 + i as f32 * 40.0),
         ));
     }
 
@@ -76,7 +76,7 @@ pub fn spawn_terrain(
             commands.spawn((
                 Mesh3d(thresh_mesh.clone()),
                 MeshMaterial3d(white_mat.clone()),
-                Transform::from_xyz(x, 0.03, z),
+                Transform::from_xyz(x, 0.17, z),
             ));
         }
     }

@@ -313,43 +313,52 @@ pub fn spawn_aircraft(
             ));
 
             // ── WING STRUTS (diagonal, from lower fuselage up to wing) ─
-            // Each strut runs from roughly (±0.55, -0.15, wing_z+0.2) on the
-            // fuselage to (±2.5, wing_y-0.07, wing_z) on the wing underside.
-            // Length ≈ sqrt((2.5-0.55)^2 + (0.85+0.15)^2) ≈ 2.2m
-            // Angle ≈ atan2(1.0, 1.95) ≈ 27° from horizontal
-            let strut_len = 2.20;
-            let strut_angle = (1.00_f32).atan2(1.95); // ~27°
+            // Computed mathematically: position = midpoint, length = distance,
+            // angle = atan2(dx, dy) for rotation around Z.
+            //
+            // Bottom (fuselage):   (±0.55, -0.15, wing_z+0.1)
+            // Top (wing underside): (±2.5, wing_y-0.07, wing_z+0.1)
+            let ws_bot_x = 0.55_f32;
+            let ws_bot_y = -0.15_f32;
+            let ws_top_x = 2.50_f32;
+            let ws_top_y = wing_y - 0.07; // 0.78
+            let ws_dx = ws_top_x - ws_bot_x; // 1.95
+            let ws_dy = ws_top_y - ws_bot_y; // 0.93
+            let ws_len = (ws_dx * ws_dx + ws_dy * ws_dy).sqrt(); // ~2.16
+            let ws_mid_x = (ws_bot_x + ws_top_x) * 0.5; // ~1.525
+            let ws_mid_y = (ws_bot_y + ws_top_y) * 0.5; // ~0.315
+            let ws_angle = ws_dx.atan2(ws_dy); // rotation around Z
 
-            // Left strut (front)
+            // Left strut (front) — top tilts left, positive Z rotation
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.04, strut_len, 0.06))),
+                Mesh3d(meshes.add(Cuboid::new(0.04, ws_len, 0.06))),
                 MeshMaterial3d(dark_grey_mat.clone()),
-                Transform::from_xyz(-1.52, 0.35, wing_z + 0.10)
-                    .with_rotation(Quat::from_rotation_z(strut_angle)),
+                Transform::from_xyz(-ws_mid_x, ws_mid_y, wing_z + 0.10)
+                    .with_rotation(Quat::from_rotation_z(ws_angle)),
             ));
 
-            // Left strut (rear/jury strut) — thinner, slightly aft
+            // Left strut (rear/jury strut)
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.03, strut_len * 0.95, 0.04))),
+                Mesh3d(meshes.add(Cuboid::new(0.03, ws_len * 0.95, 0.04))),
                 MeshMaterial3d(dark_grey_mat.clone()),
-                Transform::from_xyz(-1.52, 0.35, wing_z + 0.55)
-                    .with_rotation(Quat::from_rotation_z(strut_angle)),
+                Transform::from_xyz(-ws_mid_x, ws_mid_y, wing_z + 0.55)
+                    .with_rotation(Quat::from_rotation_z(ws_angle)),
             ));
 
-            // Right strut (front)
+            // Right strut (front) — top tilts right, negative Z rotation
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.04, strut_len, 0.06))),
+                Mesh3d(meshes.add(Cuboid::new(0.04, ws_len, 0.06))),
                 MeshMaterial3d(dark_grey_mat.clone()),
-                Transform::from_xyz(1.52, 0.35, wing_z + 0.10)
-                    .with_rotation(Quat::from_rotation_z(-strut_angle)),
+                Transform::from_xyz(ws_mid_x, ws_mid_y, wing_z + 0.10)
+                    .with_rotation(Quat::from_rotation_z(-ws_angle)),
             ));
 
             // Right strut (rear/jury strut)
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.03, strut_len * 0.95, 0.04))),
+                Mesh3d(meshes.add(Cuboid::new(0.03, ws_len * 0.95, 0.04))),
                 MeshMaterial3d(dark_grey_mat.clone()),
-                Transform::from_xyz(1.52, 0.35, wing_z + 0.55)
-                    .with_rotation(Quat::from_rotation_z(-strut_angle)),
+                Transform::from_xyz(ws_mid_x, ws_mid_y, wing_z + 0.55)
+                    .with_rotation(Quat::from_rotation_z(-ws_angle)),
             ));
 
             // ── HORIZONTAL STABILIZER (tail, low) ──────────────────────
@@ -415,58 +424,72 @@ pub fn spawn_aircraft(
                     .with_rotation(Quat::from_rotation_z(PI / 2.0)),
             ));
 
-            // -- Left main gear --
-            // V-shaped strut from fuselage down to wheel
+            // -- Main landing gear struts (computed geometrically) --
+            // Top (fuselage bottom): (±0.55, -0.55, gear_z)
+            // Bottom (wheel center):  (±1.15, -1.35, gear_z)
+            let gear_z = -0.20_f32;
+            let lg_top_x = 0.55_f32;
+            let lg_top_y = -0.55_f32;
+            let lg_bot_x = 1.15_f32;
+            let lg_bot_y = -1.35_f32;
+            let lg_dx = lg_bot_x - lg_top_x; // 0.60
+            let lg_dy = lg_bot_y - lg_top_y; // -0.80
+            let lg_len = (lg_dx * lg_dx + lg_dy * lg_dy).sqrt(); // 1.0
+            let lg_mid_x = (lg_top_x + lg_bot_x) * 0.5; // 0.85
+            let lg_mid_y = (lg_top_y + lg_bot_y) * 0.5; // -0.95
+            let lg_angle = lg_dx.atan2(lg_dy); // atan2(0.60, -0.80)
+
+            // Left main gear strut — bottom goes left, positive Z rotation
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.06, 0.85, 0.08))),
+                Mesh3d(meshes.add(Cuboid::new(0.06, lg_len, 0.08))),
                 MeshMaterial3d(gear_mat.clone()),
-                Transform::from_xyz(-0.80, -0.95, -0.20)
-                    .with_rotation(Quat::from_rotation_z(-0.20)),
+                Transform::from_xyz(-lg_mid_x, lg_mid_y, gear_z)
+                    .with_rotation(Quat::from_rotation_z(lg_angle)),
             ));
             // Axle / horizontal brace
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.50, 0.05, 0.06))),
                 MeshMaterial3d(gear_mat.clone()),
-                Transform::from_xyz(-1.00, -1.35, -0.20),
+                Transform::from_xyz(-1.00, -1.35, gear_z),
             ));
             // Left main wheel
             parent.spawn((
                 Mesh3d(wheel_mesh.clone()),
                 MeshMaterial3d(tire_mat.clone()),
-                Transform::from_xyz(-1.15, -1.35, -0.20)
+                Transform::from_xyz(-1.15, -1.35, gear_z)
                     .with_rotation(Quat::from_rotation_z(PI / 2.0)),
             ));
             // Left wheel fairing/pant
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.18, 0.25, 0.45))),
                 MeshMaterial3d(white_mat.clone()),
-                Transform::from_xyz(-1.15, -1.32, -0.20),
+                Transform::from_xyz(-1.15, -1.32, gear_z),
             ));
 
-            // -- Right main gear --
+            // Right main gear strut — bottom goes right, negative Z rotation
             parent.spawn((
-                Mesh3d(meshes.add(Cuboid::new(0.06, 0.85, 0.08))),
+                Mesh3d(meshes.add(Cuboid::new(0.06, lg_len, 0.08))),
                 MeshMaterial3d(gear_mat.clone()),
-                Transform::from_xyz(0.80, -0.95, -0.20)
-                    .with_rotation(Quat::from_rotation_z(0.20)),
+                Transform::from_xyz(lg_mid_x, lg_mid_y, gear_z)
+                    .with_rotation(Quat::from_rotation_z(-lg_angle)),
             ));
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.50, 0.05, 0.06))),
                 MeshMaterial3d(gear_mat.clone()),
-                Transform::from_xyz(1.00, -1.35, -0.20),
+                Transform::from_xyz(1.00, -1.35, gear_z),
             ));
             // Right main wheel
             parent.spawn((
                 Mesh3d(wheel_mesh.clone()),
                 MeshMaterial3d(tire_mat.clone()),
-                Transform::from_xyz(1.15, -1.35, -0.20)
+                Transform::from_xyz(1.15, -1.35, gear_z)
                     .with_rotation(Quat::from_rotation_z(PI / 2.0)),
             ));
             // Right wheel fairing/pant
             parent.spawn((
                 Mesh3d(meshes.add(Cuboid::new(0.18, 0.25, 0.45))),
                 MeshMaterial3d(white_mat.clone()),
-                Transform::from_xyz(1.15, -1.32, -0.20),
+                Transform::from_xyz(1.15, -1.32, gear_z),
             ));
 
             // Nosewheel fairing
