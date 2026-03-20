@@ -128,9 +128,14 @@ fn aerodynamic_yaw(
         let dot_right = vel_normalized.dot(right);
         let beta = dot_right.clamp(-1.0, 1.0).asin();
 
-        // Yaw rate proportional to β and dynamic pressure
+        // Scale aero yaw by bank angle: active when banked, off when level.
+        // This way rudder permanently changes heading in level flight,
+        // while banking still turns via the nose-follows-velocity mechanism.
+        let up_world_y = up.y; // cos(bankAngle): 1 when level, 0 when knife-edge
+        let bank_factor = (1.0 - up_world_y * up_world_y).max(0.0).sqrt();
+
         let q_scale = q / Q_CRUISE;
-        let aero_yaw_rate = beta * AERO_YAW_COEFF * q_scale;
+        let aero_yaw_rate = beta * AERO_YAW_COEFF * q_scale * bank_factor;
 
         // Rotate around the aircraft's local up axis (negate to reduce β)
         let yaw_rot = Quat::from_axis_angle(up, -aero_yaw_rate * dt);

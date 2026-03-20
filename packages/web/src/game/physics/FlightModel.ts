@@ -245,7 +245,13 @@ export function stepFlightModel(
     const betaNew = Math.asin(clamp(dotRightNew, -1, 1));
 
     const qScale = dynamicPressure / Q_CRUISE;
-    const aeroYawRate = betaNew * AERO_YAW_COEFF * qScale;
+
+    // Scale aero yaw by bank angle: active when banked, off when level.
+    // This way rudder permanently changes heading in level flight,
+    // while banking still turns via the nose-follows-velocity mechanism.
+    // up.y = cos(bankAngle): 1 when level, 0 when knife-edge.
+    const bankFactor = Math.sqrt(Math.max(0, 1 - up.y * up.y));
+    const aeroYawRate = betaNew * AERO_YAW_COEFF * qScale * bankFactor;
 
     // Apply yaw rotation around the aircraft's local up axis
     // Negative sign: rotates nose toward velocity (reduces β)

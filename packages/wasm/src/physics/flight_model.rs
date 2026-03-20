@@ -11,8 +11,8 @@ const CL_MAX: f32 = 1.5;
 const STALL_ANGLE: f32 = 0.2618; // ~15 degrees
 
 /// Lateral (sideslip) force coefficient per radian of β.
-/// Kept moderate so it doesn't fight lift-induced turns.
-const SIDE_FORCE_COEFF: f32 = 0.3;
+/// Pushes velocity to follow the nose — makes rudder effective.
+const SIDE_FORCE_COEFF: f32 = 1.0;
 
 /// Aerodynamic yaw rate coefficient (rad/s per radian of β at cruise q).
 /// The vertical tail creates a yawing moment that rotates the nose toward

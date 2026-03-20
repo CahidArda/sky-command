@@ -78,8 +78,8 @@ export const CL_MAX = CL_ALPHA_SLOPE * STALL_ALPHA; // ~1.64
 
 /** Lateral (sideslip) force coefficient (per radian of β).
  *  Models side force from the fuselage + vertical tail on the velocity.
- *  Kept moderate so it doesn't fight lift-induced turns. */
-export const SIDE_FORCE_COEFF = 0.3;
+ *  Pushes velocity to follow the nose — makes rudder effective. */
+export const SIDE_FORCE_COEFF = 1.0;
 
 /** Aerodynamic yaw rate coefficient.
  *  When there's sideslip (β ≠ 0), the vertical tail creates a yawing
