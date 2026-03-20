@@ -22,21 +22,23 @@ pub fn wasm_main() {
 
 pub fn run() {
     App::new()
-        .add_plugins(DefaultPlugins
-            .set(AssetPlugin {
-                meta_check: bevy::asset::AssetMetaCheck::Never,
-                ..default()
-            })
-            .set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "SkyCommand v0.2.0".into(),
-                canvas: Some("#skycommand-canvas".into()),
-                fit_canvas_to_parent: true,
-                prevent_default_event_handling: true,
-                ..default()
-            }),
-            ..default()
-        }))
+        .add_plugins(
+            DefaultPlugins
+                .set(AssetPlugin {
+                    meta_check: bevy::asset::AssetMetaCheck::Never,
+                    ..default()
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: "SkyCommand v0.2.0".into(),
+                        canvas: Some("#skycommand-canvas".into()),
+                        fit_canvas_to_parent: true,
+                        prevent_default_event_handling: true,
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .init_state::<GameState>()
         .add_plugins((
             world::WorldPlugin,
