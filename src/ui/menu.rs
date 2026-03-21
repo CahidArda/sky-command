@@ -117,14 +117,14 @@ pub fn spawn_menu(mut commands: Commands) {
                 },
             ));
 
-            // Version + GitHub link
+            // Version
             root.spawn((
-                Text::new("v0.2.0 · github.com/CahidArda/skysim-rs"),
+                Text::new("v0.2.0"),
                 TextFont {
                     font_size: 12.0,
                     ..default()
                 },
-                TextColor(Color::srgb(0.2, 0.2, 0.3)),
+                TextColor(Color::srgb(0.3, 0.3, 0.4)),
                 Node {
                     margin: UiRect::top(Val::Px(10.0)),
                     ..default()
