@@ -3,17 +3,17 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SkyCommand v0.1.0</title>
+    <title>SkySim.rs v0.1.0</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
     <div id="loading">
         <div class="spinner"></div>
-        <p>Loading SkyCommand...</p>
+        <p>Loading SkySim.rs...</p>
     </div>
-    <canvas id="skycommand-canvas"></canvas>
+    <canvas id="skysim-canvas"></canvas>
     <script type="module">
-        import init from './pkg/skycommand_wasm.js';
+        import init from './pkg/skysim_rs.js';
 
         async function run() {
             try {
@@ -27,7 +27,7 @@
                     return;
                 }
                 const loading = document.getElementById('loading');
-                loading.innerHTML = '<p class="error">Failed to load SkyCommand: ' + error.message + '</p>';
+                loading.innerHTML = '<p class="error">Failed to load SkySim.rs: ' + error.message + '</p>';
                 console.error('Failed to initialize WASM:', error);
             }
         }

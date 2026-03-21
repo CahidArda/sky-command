@@ -35,7 +35,7 @@ pub fn spawn_menu(mut commands: Commands) {
         .with_children(|root| {
             // Title
             root.spawn((
-                Text::new("SkyCommand"),
+                Text::new("SkySim.rs"),
                 TextFont {
                     font_size: 52.0,
                     ..default()
@@ -117,9 +117,9 @@ pub fn spawn_menu(mut commands: Commands) {
                 },
             ));
 
-            // Version
+            // Version + GitHub link
             root.spawn((
-                Text::new("v0.2.0 (wasm)"),
+                Text::new("v0.2.0 · github.com/CahidArda/skysim-rs"),
                 TextFont {
                     font_size: 12.0,
                     ..default()

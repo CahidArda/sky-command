@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::f32::consts::PI;
 
 use super::atmosphere::{self, G, RHO_SEA_LEVEL};
-use crate::aircraft::Aircraft;
+use crate::aircraft::{Aircraft, Crashed};
 
 /// Maximum lift coefficient before stall.
 const CL_MAX: f32 = 1.5;
@@ -63,7 +63,10 @@ fn compute_alpha(forward: Vec3, up: Vec3, velocity: Vec3, speed: f32) -> f32 {
 ///
 /// Computes lift, drag, thrust, and weight forces, then integrates
 /// velocity. All computation is in SI units.
-pub fn update_flight_physics(time: Res<Time>, mut query: Query<(&mut Aircraft, &Transform)>) {
+pub fn update_flight_physics(
+    time: Res<Time>,
+    mut query: Query<(&mut Aircraft, &Transform), Without<Crashed>>,
+) {
     let dt = time.delta_secs();
     if dt <= 0.0 || dt > 0.1 {
         return; // Skip bad timesteps

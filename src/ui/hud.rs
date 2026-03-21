@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::aircraft::{Aircraft, SelectedAircraft};
+use crate::aircraft::{Aircraft, Crashed, SelectedAircraft};
 use crate::physics::flight_model::STALL_ANGLE;
 
 /// Marker on all UI entities spawned during Flying state (for cleanup on exit).
@@ -232,7 +232,7 @@ pub fn spawn_hud(mut commands: Commands, selected: Res<SelectedAircraft>) {
 #[allow(clippy::type_complexity)]
 pub fn update_hud(
     time: Res<Time>,
-    aircraft_query: Query<(&Aircraft, &Transform)>,
+    aircraft_query: Query<(&Aircraft, &Transform, Option<&Crashed>)>,
     mut text_query: Query<(
         &mut Text,
         Option<&HudSpeed>,
@@ -246,10 +246,11 @@ pub fn update_hud(
         Option<&HudStallWarning>,
     )>,
 ) {
-    let Ok((aircraft, transform)) = aircraft_query.get_single() else {
+    let Ok((aircraft, transform, crashed)) = aircraft_query.get_single() else {
         return;
     };
 
+    let is_crashed = crashed.is_some();
     let speed_knots = aircraft.velocity.length() * MS_TO_KNOTS;
     let altitude_feet = transform.translation.y * M_TO_FEET;
     let forward = transform.forward().as_vec3();
@@ -295,11 +296,21 @@ pub fn update_hud(
             **text = format!("G: {:.1}", g_load);
         }
         if stall.is_some() {
-            **text = if show_stall {
-                "STALL".to_string()
+            if is_crashed {
+                // Blink the crash message
+                let show_crash = ((time.elapsed_secs() * 3.0) as u32).is_multiple_of(2);
+                **text = if show_crash {
+                    "CRASHED - PRESS ESC TO RESTART".to_string()
+                } else {
+                    String::new()
+                };
             } else {
-                String::new()
-            };
+                **text = if show_stall {
+                    "STALL".to_string()
+                } else {
+                    String::new()
+                };
+            }
         }
     }
 }

@@ -21,8 +21,8 @@ fn main() {
                 })
                 .set(WindowPlugin {
                     primary_window: Some(Window {
-                        title: "SkyCommand v0.2.0".into(),
-                        canvas: Some("#skycommand-canvas".into()),
+                        title: "SkySim.rs v0.2.0".into(),
+                        canvas: Some("#skysim-canvas".into()),
                         fit_canvas_to_parent: true,
                         prevent_default_event_handling: true,
                         ..default()

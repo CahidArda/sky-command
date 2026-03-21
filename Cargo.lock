@@ -3407,7 +3407,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "skycommand-wasm"
+name = "skysim-rs"
 version = "0.2.0"
 dependencies = [
  "bevy",

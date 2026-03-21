@@ -21,6 +21,8 @@ pub fn default_aircraft() -> Aircraft {
         side_force_coeff: 2.0,
         alpha: 0.0,
         g_load: 1.0,
+        wingtip_left: Vec3::new(-5.5, 0.95, -0.50),
+        wingtip_right: Vec3::new(5.5, 0.95, -0.50),
     }
 }
 

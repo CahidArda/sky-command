@@ -4,7 +4,7 @@ pub mod atmosphere;
 pub mod flight_model;
 
 use crate::aircraft::{
-    AileronLeft, AileronRight, Aircraft, ControlInput, Elevator, Propeller, Rudder,
+    AileronLeft, AileronRight, Aircraft, ControlInput, Crashed, Elevator, Propeller, Rudder,
 };
 use crate::state::GameState;
 use flight_model::{AERO_YAW_COEFF, Q_CRUISE, STALL_ANGLE};
@@ -42,13 +42,19 @@ impl Plugin for PhysicsPlugin {
                     .after(aerodynamic_yaw),
                 spin_propeller.in_set(PhysicsSet::TransformSync),
                 animate_control_surfaces.in_set(PhysicsSet::TransformSync),
+                detect_crash
+                    .in_set(PhysicsSet::TransformSync)
+                    .after(update_aircraft_transform),
             ),
         );
     }
 }
 
 /// Update throttle based on control input.
-fn update_throttle(time: Res<Time>, mut query: Query<(&mut Aircraft, &ControlInput)>) {
+fn update_throttle(
+    time: Res<Time>,
+    mut query: Query<(&mut Aircraft, &ControlInput), Without<Crashed>>,
+) {
     let dt = time.delta_secs();
     for (mut aircraft, input) in query.iter_mut() {
         aircraft.throttle += input.throttle_change * dt * 0.5;
@@ -59,7 +65,7 @@ fn update_throttle(time: Res<Time>, mut query: Query<(&mut Aircraft, &ControlInp
 /// Update angular velocity based on control input and apply rotation.
 fn update_angular_velocity(
     time: Res<Time>,
-    mut query: Query<(&mut Aircraft, &ControlInput, &mut Transform)>,
+    mut query: Query<(&mut Aircraft, &ControlInput, &mut Transform), Without<Crashed>>,
 ) {
     let dt = time.delta_secs();
     for (mut aircraft, input, mut transform) in query.iter_mut() {
@@ -104,7 +110,10 @@ fn update_angular_velocity(
 /// to the aircraft's local up), and the rotation is applied around the
 /// aircraft's local up axis. This works correctly at all bank angles —
 /// it doesn't create parasitic pitch like world-Y rotation does.
-fn aerodynamic_yaw(time: Res<Time>, mut query: Query<(&Aircraft, &mut Transform)>) {
+fn aerodynamic_yaw(
+    time: Res<Time>,
+    mut query: Query<(&Aircraft, &mut Transform), Without<Crashed>>,
+) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
@@ -167,7 +176,10 @@ fn aerodynamic_yaw(time: Res<Time>, mut query: Query<(&Aircraft, &mut Transform)
 }
 
 /// Sync the Aircraft velocity into the Transform position.
-fn update_aircraft_transform(time: Res<Time>, mut query: Query<(&Aircraft, &mut Transform)>) {
+fn update_aircraft_transform(
+    time: Res<Time>,
+    mut query: Query<(&Aircraft, &mut Transform), Without<Crashed>>,
+) {
     let dt = time.delta_secs();
     for (aircraft, mut transform) in query.iter_mut() {
         transform.translation += aircraft.velocity * dt;
@@ -269,6 +281,23 @@ fn animate_control_surfaces(
             let deflection = Quat::from_rotation_y(-input.yaw * MAX_SURFACE_DEFLECTION);
             let target = rudder_data.base_rotation * deflection;
             tf.rotation = tf.rotation.slerp(target, t);
+        }
+    }
+}
+
+/// Detect a crash: if the aircraft is at ground level with significant speed,
+/// mark it as crashed and zero out velocity.
+fn detect_crash(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut Aircraft, &Transform), Without<Crashed>>,
+) {
+    for (entity, mut aircraft, transform) in query.iter_mut() {
+        let speed = aircraft.velocity.length();
+        if transform.translation.y <= 0.5 && speed > 5.0 {
+            aircraft.velocity = Vec3::ZERO;
+            aircraft.angular_velocity = Vec3::ZERO;
+            aircraft.throttle = 0.0;
+            commands.entity(entity).insert(Crashed);
         }
     }
 }

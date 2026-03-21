@@ -29,6 +29,10 @@ pub struct Aircraft {
     pub alpha: f32,
     /// Current G-load, updated by flight model each frame.
     pub g_load: f32,
+    /// Left wingtip position in local space (for vortex trails).
+    pub wingtip_left: Vec3,
+    /// Right wingtip position in local space.
+    pub wingtip_right: Vec3,
 }
 
 /// Control input component attached to the aircraft.
@@ -43,6 +47,10 @@ pub struct ControlInput {
 /// Marker for the propeller mesh (prop plane only).
 #[derive(Component)]
 pub struct Propeller;
+
+/// Marker component indicating the aircraft has crashed.
+#[derive(Component)]
+pub struct Crashed;
 
 /// Marker for a left aileron (deflects opposite to right).
 #[derive(Component)]

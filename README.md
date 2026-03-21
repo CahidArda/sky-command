@@ -1,4 +1,4 @@
-# SkyCommand
+# SkySim.rs
 
 A 3D flight simulator with realistic aerodynamics, running in the browser via WebAssembly. Built with Bevy 0.15 and Rust.
 
@@ -66,13 +66,13 @@ rm -rf web/pkg web/assets
 mkdir -p web/pkg web/assets
 cp pkg/* web/pkg/
 cp -r assets/* web/assets/
-npx wrangler pages deploy web --project-name=skycommand
+npx wrangler pages deploy web --project-name=skysim-rs
 ```
 
 ## Project Structure
 
 ```
-skycommand/
+skysim-rs/
 ├── src/
 │   ├── main.rs              # Native entry point
 │   ├── lib.rs               # WASM entry point
